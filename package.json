@@ -1,0 +1,52 @@
+{
+  "name": "beyond-rasooli",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit --incremental false",
+    "seed": "tsx scripts/seed.ts",
+    "check-ui-strings": "tsx scripts/check-ui-strings.ts",
+    "test": "tsx --test tests/*.test.ts",
+    "check-launch": "tsx scripts/check-launch.ts",
+    "seed:localization": "tsx scripts/seed-localization.ts",
+    "migrate:founder-workflow": "node scripts/migrate-founder-workflow.mjs"
+  },
+  "dependencies": {
+    "@payloadcms/db-postgres": "^3.90.2",
+    "@payloadcms/db-sqlite": "^3.90.2",
+    "@payloadcms/live-preview-react": "^3.90.2",
+    "@payloadcms/next": "^3.90.2",
+    "@payloadcms/richtext-lexical": "^3.90.2",
+    "clsx": "^2.1.1",
+    "graphql": "^16.8.1",
+    "lucide-react": "^1.52.0",
+    "next": "^16.3.8",
+    "next-intl": "^4.14.9",
+    "payload": "^3.90.2",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "sanitize-html": "^2.14.0",
+    "sharp": "^0.35.5",
+    "tailwind-merge": "^3.0.2"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.63.0",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^22.13.9",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "@types/sanitize-html": "^2.13.0",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.4.0",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.15",
+    "typescript": "^5.8.2"
+  }
+}

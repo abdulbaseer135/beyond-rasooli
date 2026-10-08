@@ -1,0 +1,70 @@
+{
+  "PHASE 1 — ADMIN AUTHENTICATION": {
+    "status": "PASS",
+    "details": "Login, rejection of bad credentials, admin role verified, browser session established."
+  },
+  "PHASE 2 — ADMIN UI / BRANDING": {
+    "status": "PASS",
+    "details": "Branding logo, light theme, fonts, and clean layout verified without hydration errors."
+  },
+  "PHASE 3 — ADMIN NAVIGATION": {
+    "status": "PASS",
+    "details": "All collections, Site Settings, and QuickAdd navigation links verified."
+  },
+  "PHASE 7 — TOPIC": {
+    "status": "PASS",
+    "details": "Psychology & Human Behaviour topic verified with ID 1. Localized in ps, fa, and en."
+  },
+  "PHASE 9 — AUTHOR": {
+    "status": "PASS",
+    "details": "Founder Author record verified with ID 1 and localized bios."
+  },
+  "PHASE 4 — MEDIA LIBRARY": {
+    "status": "PASS",
+    "details": "Media uploaded (ID 7), responsive WebP variants generated, public rendering verified, 0 errors."
+  },
+  "PHASE 10 — SOURCES": {
+    "status": "PASS",
+    "details": "Shared evidence-backed Source schema verified with 2 peer-reviewed citations."
+  },
+  "PHASE 5 — ARTICLE CREATION": {
+    "status": "PASS",
+    "details": "Article created (ID 1), exercised Draft -> In Review -> Published, 3 sections, cover, 2 sources."
+  },
+  "PHASE 6 — VIDEO CREATION": {
+    "status": "PASS",
+    "details": "Video created (ID 1), valid approved test YouTube URL, linked to test article, published."
+  },
+  "PHASE 8 — COLLECTION": {
+    "status": "PASS",
+    "details": "Collection created as Draft (ID 1). MASTER_PRD threshold correctly enforced (hidden with < 3 items)."
+  },
+  "PHASE 11 — PREVIEW": {
+    "status": "PASS",
+    "details": "Live preview works for Articles and Videos using public design without publishing."
+  },
+  "PHASE 12 — PUBLISHING WORKFLOW": {
+    "status": "PASS",
+    "details": "Draft -> In Review -> Published workflow and deletion protection rules verified."
+  },
+  "PHASE 13 — PUBLIC-SITE VERIFICATION": {
+    "status": "PASS",
+    "details": "Verified Homepage, Read, Article detail, Watch, Video detail, Topics, Topic detail, and Search."
+  },
+  "PHASE 14 — MULTILINGUAL ADMIN BEHAVIOR": {
+    "status": "PASS",
+    "details": "One doc per language linked by translationGroup. Pashto draft saved with machine_draft status. Unreviewed items kept draft."
+  },
+  "PHASE 15 — UI STRINGS": {
+    "status": "PASS",
+    "details": "Founder can edit UI strings, change reflects without code deploy, restored cleanly."
+  },
+  "PHASE 16 — SITE SETTINGS": {
+    "status": "PASS",
+    "details": "Site settings configured and driving public site header/footer."
+  },
+  "PHASE 17 — ERROR AND CONSOLE CLEANUP": {
+    "status": "PASS",
+    "details": "Zero application network errors or hydration bugs during full automated session."
+  }
+}

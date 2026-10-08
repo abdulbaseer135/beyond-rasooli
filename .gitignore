@@ -1,0 +1,36 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Next.js build
+.next
+out
+
+# Payload CMS & DB
+payload-types.ts.bak
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+data/*.sqlite
+
+# Environment variables
+.env
+.env*.local
+!.env.example
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+.qa/
+playwright-report/
+test-results/
+
+.next-qa/
