@@ -7,10 +7,27 @@ import { ValidationError, type CollectionBeforeValidateHook } from "payload";
 import type { Access, CollectionBeforeChangeHook, Where } from "payload";
 export const publicContentRead: Access = async ({ req }) => {
   if (req.user) return true;
-  const settings = await req.payload.findGlobal({
-    slug: "site-settings",
-    overrideAccess: true,
-  });
+  let requireReview = true;
+  try {
+    const cached = req.context ? (req.context as Record<string, unknown>)._requireReviewBeforePublic : undefined;
+    if (typeof cached === "boolean") {
+      requireReview = cached;
+    } else {
+      const settings = await req.payload.findGlobal({
+        slug: "site-settings",
+        overrideAccess: true,
+      });
+      requireReview = Boolean(settings?.requireReviewBeforePublic);
+      if (req.context) {
+        (req.context as Record<string, unknown>)._requireReviewBeforePublic = requireReview;
+      }
+    }
+  } catch {
+    // Fail-safe: if settings cannot be fetched due to transient DB connection timeout,
+    // enforce the safest review requirement so unreviewed drafts are never leaked.
+    requireReview = true;
+  }
+
   const clauses: Where[] = [
     { status: { equals: "published" } },
     {
@@ -20,10 +37,20 @@ export const publicContentRead: Access = async ({ req }) => {
       ],
     },
   ];
-  if (settings.requireReviewBeforePublic)
-    clauses.push({ translationStatus: { not_equals: "machine_draft" } });
+  if (requireReview) {
+    clauses.push({
+      or: [
+        { translationStatus: { not_equals: "machine_draft" } },
+        { translationStatus: { exists: false } },
+      ],
+    });
+  }
   return { and: clauses };
 };
+export function calculateReadingTime(prose: string): number {
+  return Math.max(1, Math.ceil(prose.trim().split(/\s+/).filter(Boolean).length / 200));
+}
+
 export const contentState: CollectionBeforeChangeHook = async ({
   data,
   originalDoc,
@@ -32,6 +59,7 @@ export const contentState: CollectionBeforeChangeHook = async ({
 }) => {
   const status = data.status ?? originalDoc?.status ?? "draft";
   const system = Boolean(
+    req.context?.reviewApproval ||
     (req.context.scheduledPublish &&
       originalDoc?.status === "scheduled" &&
       status === "published") ||
@@ -54,8 +82,11 @@ export const contentState: CollectionBeforeChangeHook = async ({
     if(settings.requireReviewBeforePublic)await invalid(req,"translationStatus","review_required");
   }
   if (collection.slug === "articles") {
+    if (data.summary === undefined || data.summary === null) {
+      data.summary = originalDoc?.summary ?? "";
+    }
     const prose = collectProse(data.body ?? originalDoc?.body).join(" ");
-    data.readingTimeMinutes = Math.max(1, Math.ceil(prose.trim().split(/\s+/).filter(Boolean).length / 200));
+    data.readingTimeMinutes = calculateReadingTime(prose);
   }
   if (collection.slug === "videos") {
     const next = { ...originalDoc, ...data };
@@ -74,6 +105,18 @@ export const contentState: CollectionBeforeChangeHook = async ({
     if (data.description && !data.summary) data.summary = data.description;
     if (data.summary && !data.description) data.description = data.summary;
     if (data.youtubeUrl !== undefined && !extractYouTubeId(data.youtubeUrl)) await invalid(req, "youtubeUrl", "youtube_invalid");
+  }
+
+  if (collection.slug === "articles" && req.user) {
+    if (!data.author && !originalDoc?.author) data.author = req.user.id;
+    if (!data.authorProfile && !originalDoc?.authorProfile) {
+      const userAuthorProfile = (req.user as unknown as { authorProfile?: unknown })?.authorProfile;
+      if (userAuthorProfile) {
+        data.authorProfile = typeof userAuthorProfile === "object" && userAuthorProfile && "id" in userAuthorProfile
+          ? (userAuthorProfile as { id: unknown }).id
+          : userAuthorProfile;
+      }
+    }
   }
 
   // PRD & Founder Publishing Validation (P0 hard check for published/scheduled states)
@@ -109,6 +152,13 @@ export const contentState: CollectionBeforeChangeHook = async ({
           req,
         });
       }
+    }
+  }
+
+  if (status === "in_review" && req.user) {
+    data.submittedBy = req.user.id;
+    if (req.user.role !== "admin") {
+      data.reviewDecision = "none";
     }
   }
 

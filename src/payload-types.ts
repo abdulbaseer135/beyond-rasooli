@@ -78,6 +78,7 @@ export interface Config {
     pages: Page;
     'ui-strings': UiString;
     contacts: Contact;
+    notifications: Notification;
     'translation-usage': TranslationUsage;
     'slug-redirects': SlugRedirect;
     'payload-kv': PayloadKv;
@@ -98,6 +99,7 @@ export interface Config {
     pages: PagesSelect<false> | PagesSelect<true>;
     'ui-strings': UiStringsSelect<false> | UiStringsSelect<true>;
     contacts: ContactsSelect<false> | ContactsSelect<true>;
+    notifications: NotificationsSelect<false> | NotificationsSelect<true>;
     'translation-usage': TranslationUsageSelect<false> | TranslationUsageSelect<true>;
     'slug-redirects': SlugRedirectsSelect<false> | SlugRedirectsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
@@ -151,7 +153,28 @@ export interface User {
   id: number;
   name: string;
   bio?: string | null;
+  /**
+   * Author avatar for public article and video bylines
+   */
+  photo?: (number | null) | Media;
   role: 'admin' | 'editor';
+  /**
+   * Founder review and activation status
+   */
+  status: 'approved' | 'pending' | 'rejected' | 'suspended';
+  /**
+   * Submitted by the applicant during editor registration
+   */
+  reasonForJoining?: string | null;
+  /**
+   * Visible to founder when an application is rejected
+   */
+  rejectionReason?: string | null;
+  appliedAt?: string | null;
+  /**
+   * Automatically synchronized public author profile
+   */
+  authorProfile?: (number | null) | Author;
   /**
    * Optional author social profiles
    */
@@ -160,6 +183,7 @@ export interface User {
     instagram?: string | null;
     facebook?: string | null;
     x?: string | null;
+    tiktok?: string | null;
   };
   updatedAt: string;
   createdAt: string;
@@ -180,28 +204,6 @@ export interface User {
     | null;
   password?: string | null;
   collection: 'users';
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "authors".
- */
-export interface Author {
-  id: number;
-  name: string;
-  bio?: string | null;
-  image?: (number | null) | Media;
-  /**
-   * Optional links to public social profiles
-   */
-  socialLinks?: {
-    youtube?: string | null;
-    instagram?: string | null;
-    facebook?: string | null;
-    x?: string | null;
-    tiktok?: string | null;
-  };
-  updatedAt: string;
-  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -254,6 +256,28 @@ export interface Media {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "authors".
+ */
+export interface Author {
+  id: number;
+  name: string;
+  bio?: string | null;
+  image?: (number | null) | Media;
+  /**
+   * Optional links to public social profiles
+   */
+  socialLinks?: {
+    youtube?: string | null;
+    instagram?: string | null;
+    facebook?: string | null;
+    x?: string | null;
+    tiktok?: string | null;
+  };
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "glossary".
  */
 export interface Glossary {
@@ -277,15 +301,11 @@ export interface Article {
   id: number;
   title: string;
   /**
-   * Page and text language of this specific document
-   */
-  language: 'ps' | 'fa' | 'en';
-  /**
    * Language-specific URL slug (auto-generated from title if left blank)
    */
   slug?: string | null;
   /**
-   * Appears before body. Italic in English; regular slightly larger in Arabic script.
+   * Short description displayed on article cards and article headers
    */
   summary?: string | null;
   body?: {
@@ -303,29 +323,28 @@ export interface Article {
     };
     [k: string]: unknown;
   } | null;
-  partsEnabled?: boolean | null;
-  coverImage?: (number | null) | Media;
-  coverAlt?: string | null;
-  coverCaption?: string | null;
   /**
-   * Select existing author or click + to create a new author profile
-   */
-  authorProfile?: (number | null) | Author;
-  /**
-   * Select primary editorial topic or click + to create new topic
+   * Primary editorial topic (required when publishing)
    */
   topic?: (number | null) | Topic;
-  format?: ('article' | 'explainer' | 'mystery') | null;
-  tags?:
-    | {
-        tag: string;
-        id?: string | null;
-      }[]
-    | null;
+  coverImage?: (number | null) | Media;
+  coverAlt?: string | null;
   /**
-   * Companion short video embed at the top of the article
+   * Author byline. Automatically populated with the authenticated contributor's account.
+   */
+  author?: (number | null) | User;
+  authorProfile?: (number | null) | Author;
+  /**
+   * Optional companion short video embed at the top of the article
    */
   relatedVideo?: (number | null) | Video;
+  /**
+   * Page and text language of this specific document
+   */
+  language: 'ps' | 'fa' | 'en';
+  /**
+   * Scientific citations and evidence papers
+   */
   sources?:
     | {
         sourceType: 'paper' | 'book' | 'report' | 'site';
@@ -342,36 +361,41 @@ export interface Article {
     status?: ('established' | 'emerging' | 'debated') | null;
     text?: string | null;
   };
+  format?: ('article' | 'explainer' | 'mystery') | null;
+  tags?:
+    | {
+        tag: string;
+        id?: string | null;
+      }[]
+    | null;
+  partsEnabled?: boolean | null;
+  coverCaption?: string | null;
   status: 'draft' | 'in_review' | 'scheduled' | 'published' | 'archived';
   publishedAt?: string | null;
   featuredOrder?: number | null;
+  reviewDecision?: ('none' | 'changes_requested' | 'approved' | 'rejected') | null;
+  /**
+   * Feedback visible to the editor if changes are requested or content is rejected
+   */
+  reviewNotes?: string | null;
+  /**
+   * Editor who submitted this content for approval
+   */
+  submittedBy?: (number | null) | User;
   showUpdatedDate?: boolean | null;
   correctionNote?: string | null;
-  /**
-   * Machine drafts display an automatic notice on the public site and are noindexed until reviewed
-   */
   translationStatus?: ('none' | 'machine_draft' | 'reviewed') | null;
   seoTitle?: string | null;
   metaDescription?: string | null;
   ogImage?: (number | null) | Media;
-  /**
-   * Shared unique identifier linking translations of this article
-   */
-  translationGroup: string;
-  /**
-   * Auto-calculated from body prose word count
-   */
   readingTimeMinutes?: number | null;
+  translationGroup?: string | null;
   translatedFromLocale?: ('ps' | 'fa' | 'en') | null;
   translatedAt?: string | null;
   reviewedAt?: string | null;
   reviewedBy?: (number | null) | User;
-  /**
-   * Flagged automatically when source language changes
-   */
   sourceChanged?: boolean | null;
   sourceHashAtTranslation?: string | null;
-  author?: (number | null) | User;
   updatedAt: string;
   createdAt: string;
 }
@@ -386,6 +410,10 @@ export interface Topic {
    * URL slug (auto-generated from topic name if left blank)
    */
   slug?: string | null;
+  /**
+   * Topic publication status (editor proposals require founder approval)
+   */
+  status: 'published' | 'pending' | 'draft';
   description?: string | null;
   coverImage?: (number | null) | Media;
   /**
@@ -401,44 +429,49 @@ export interface Topic {
  */
 export interface Video {
   id: number;
+  /**
+   * Title of the video explainer
+   */
   title: string;
   /**
-   * Page and text language (UI context, title, notes, transcript)
+   * Standard YouTube link or Shorts URL (e.g. https://youtu.be/... or https://youtube.com/shorts/...)
+   */
+  youtubeUrl: string;
+  /**
+   * Concise overview shown below the video player and on cards. Also used as video summary.
+   */
+  description?: string | null;
+  /**
+   * Primary editorial topic
+   */
+  topic?: (number | null) | Topic;
+  /**
+   * Page context language (title, transcript, localized notes)
    */
   language: 'ps' | 'fa' | 'en';
   /**
-   * Language of the actual voiceover audio in the video (distinct from page language)
+   * Actual spoken audio language of the video voiceover (may differ from page language)
    */
   spokenLanguage: 'ps' | 'fa' | 'en';
   /**
-   * Language-specific URL slug (auto-generated from title if left blank)
+   * Custom poster image. If left blank, YouTube thumbnail is used automatically.
    */
-  slug?: string | null;
-  /**
-   * Overview shown below player and in video cards.
-   */
-  description?: string | null;
-  transcript?: string | null;
-  youtubeUrl: string;
   thumbnail?: (number | null) | Media;
   /**
-   * Enter duration as mm:ss (e.g. 0:48). Structured data seconds are calculated automatically.
+   * Formatted duration mm:ss (e.g. 0:48). Total seconds are calculated automatically.
    */
   duration?: string | null;
   /**
-   * Select topic or click + to create a new topic
-   */
-  topic?: (number | null) | Topic;
-  tags?:
-    | {
-        tag: string;
-        id?: string | null;
-      }[]
-    | null;
-  /**
-   * Linked in-depth article. Triggers the Go-Deeper card under the player.
+   * Optional companion long-form article. Powers the Go Deeper bridge under the video player.
    */
   relatedArticle?: (number | null) | Article;
+  /**
+   * Auto-generated from title if left blank
+   */
+  slug?: string | null;
+  /**
+   * Optional research studies and citations
+   */
   sources?:
     | {
         sourceType: 'paper' | 'book' | 'report' | 'site';
@@ -451,29 +484,36 @@ export interface Video {
         id?: string | null;
       }[]
     | null;
+  /**
+   * Full transcript in page language for accessibility and search
+   */
+  transcript?: string | null;
+  tags?:
+    | {
+        tag: string;
+        id?: string | null;
+      }[]
+    | null;
   status: 'draft' | 'in_review' | 'scheduled' | 'published' | 'archived';
   publishedAt?: string | null;
   featuredOrder?: number | null;
+  reviewDecision?: ('none' | 'changes_requested' | 'approved' | 'rejected') | null;
+  /**
+   * Feedback visible to the editor if changes are requested or content is rejected
+   */
+  reviewNotes?: string | null;
+  /**
+   * Editor who submitted this content for approval
+   */
+  submittedBy?: (number | null) | User;
   translationStatus?: ('none' | 'machine_draft' | 'reviewed') | null;
   seoTitle?: string | null;
   metaDescription?: string | null;
   ogImage?: (number | null) | Media;
-  /**
-   * Auto-calculated from formatted duration
-   */
   durationSeconds?: number | null;
-  /**
-   * Remote YouTube poster thumbnail URL
-   */
   remotePosterUrl?: string | null;
-  /**
-   * Synchronized with description
-   */
   summary?: string | null;
-  /**
-   * Shared unique identifier linking translations of this video page
-   */
-  translationGroup: string;
+  translationGroup?: string | null;
   translatedFromLocale?: ('ps' | 'fa' | 'en') | null;
   translatedAt?: string | null;
   reviewedAt?: string | null;
@@ -610,6 +650,45 @@ export interface Contact {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "notifications".
+ */
+export interface Notification {
+  id: number;
+  /**
+   * Founder administrator who receives this notification
+   */
+  recipient: number | User;
+  type: 'editor_registration' | 'article_approval' | 'video_approval' | 'article_resubmission' | 'video_resubmission';
+  title: string;
+  message: string;
+  /**
+   * Contributing editor or applicant triggering the event
+   */
+  actor?: (number | null) | User;
+  targetCollection?: ('users' | 'articles' | 'videos') | null;
+  targetId?: string | null;
+  submissionRevision?: string | null;
+  /**
+   * Timestamp when founder viewed or marked the notification as read
+   */
+  readAt?: string | null;
+  /**
+   * Timestamp when founder decided on the underlying request (approved/rejected)
+   */
+  resolvedAt?: string | null;
+  /**
+   * Unique event idempotency key preventing duplicate notifications
+   */
+  deduplicationKey?: string | null;
+  /**
+   * Dashboard navigation target for the notification action
+   */
+  link?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "translation-usage".
  */
 export interface TranslationUsage {
@@ -712,6 +791,10 @@ export interface PayloadLockedDocument {
         value: number | Contact;
       } | null)
     | ({
+        relationTo: 'notifications';
+        value: number | Notification;
+      } | null)
+    | ({
         relationTo: 'translation-usage';
         value: number | TranslationUsage;
       } | null)
@@ -768,7 +851,13 @@ export interface PayloadMigration {
 export interface UsersSelect<T extends boolean = true> {
   name?: T;
   bio?: T;
+  photo?: T;
   role?: T;
+  status?: T;
+  reasonForJoining?: T;
+  rejectionReason?: T;
+  appliedAt?: T;
+  authorProfile?: T;
   socialLinks?:
     | T
     | {
@@ -776,6 +865,7 @@ export interface UsersSelect<T extends boolean = true> {
         instagram?: T;
         facebook?: T;
         x?: T;
+        tiktok?: T;
       };
   updatedAt?: T;
   createdAt?: T;
@@ -890,24 +980,16 @@ export interface MediaSelect<T extends boolean = true> {
  */
 export interface ArticlesSelect<T extends boolean = true> {
   title?: T;
-  language?: T;
   slug?: T;
   summary?: T;
   body?: T;
-  partsEnabled?: T;
+  topic?: T;
   coverImage?: T;
   coverAlt?: T;
-  coverCaption?: T;
+  author?: T;
   authorProfile?: T;
-  topic?: T;
-  format?: T;
-  tags?:
-    | T
-    | {
-        tag?: T;
-        id?: T;
-      };
   relatedVideo?: T;
+  language?: T;
   sources?:
     | T
     | {
@@ -926,24 +1008,35 @@ export interface ArticlesSelect<T extends boolean = true> {
         status?: T;
         text?: T;
       };
+  format?: T;
+  tags?:
+    | T
+    | {
+        tag?: T;
+        id?: T;
+      };
+  partsEnabled?: T;
+  coverCaption?: T;
   status?: T;
   publishedAt?: T;
   featuredOrder?: T;
+  reviewDecision?: T;
+  reviewNotes?: T;
+  submittedBy?: T;
   showUpdatedDate?: T;
   correctionNote?: T;
   translationStatus?: T;
   seoTitle?: T;
   metaDescription?: T;
   ogImage?: T;
-  translationGroup?: T;
   readingTimeMinutes?: T;
+  translationGroup?: T;
   translatedFromLocale?: T;
   translatedAt?: T;
   reviewedAt?: T;
   reviewedBy?: T;
   sourceChanged?: T;
   sourceHashAtTranslation?: T;
-  author?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -953,22 +1046,15 @@ export interface ArticlesSelect<T extends boolean = true> {
  */
 export interface VideosSelect<T extends boolean = true> {
   title?: T;
+  youtubeUrl?: T;
+  description?: T;
+  topic?: T;
   language?: T;
   spokenLanguage?: T;
-  slug?: T;
-  description?: T;
-  transcript?: T;
-  youtubeUrl?: T;
   thumbnail?: T;
   duration?: T;
-  topic?: T;
-  tags?:
-    | T
-    | {
-        tag?: T;
-        id?: T;
-      };
   relatedArticle?: T;
+  slug?: T;
   sources?:
     | T
     | {
@@ -981,9 +1067,19 @@ export interface VideosSelect<T extends boolean = true> {
         note?: T;
         id?: T;
       };
+  transcript?: T;
+  tags?:
+    | T
+    | {
+        tag?: T;
+        id?: T;
+      };
   status?: T;
   publishedAt?: T;
   featuredOrder?: T;
+  reviewDecision?: T;
+  reviewNotes?: T;
+  submittedBy?: T;
   translationStatus?: T;
   seoTitle?: T;
   metaDescription?: T;
@@ -1008,6 +1104,7 @@ export interface VideosSelect<T extends boolean = true> {
 export interface TopicsSelect<T extends boolean = true> {
   name?: T;
   slug?: T;
+  status?: T;
   description?: T;
   coverImage?: T;
   order?: T;
@@ -1083,6 +1180,26 @@ export interface ContactsSelect<T extends boolean = true> {
   turnstileVerified?: T;
   deliveredViaEmail?: T;
   ipAddress?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "notifications_select".
+ */
+export interface NotificationsSelect<T extends boolean = true> {
+  recipient?: T;
+  type?: T;
+  title?: T;
+  message?: T;
+  actor?: T;
+  targetCollection?: T;
+  targetId?: T;
+  submissionRevision?: T;
+  readAt?: T;
+  resolvedAt?: T;
+  deduplicationKey?: T;
+  link?: T;
   updatedAt?: T;
   createdAt?: T;
 }

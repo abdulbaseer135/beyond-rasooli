@@ -4,6 +4,8 @@ export const Contacts: CollectionConfig = {
   slug: "contacts",
   admin: {
     useAsTitle: "name",
+    group: "Website Management",
+    hidden: ({ user }) => user?.role !== "admin",
     defaultColumns: ["name", "email", "reason", "createdAt"],
   },
   access: {

@@ -28,8 +28,9 @@ if (!admin) {
       email,
       password,
       role: "admin",
+      status: "approved",
       name: process.env.SEED_ADMIN_NAME || "Beyond Rasooli",
-    },
+    } as any,
   });
 }
 let created = 0;
@@ -90,6 +91,7 @@ for (const topic of SEED_TOPICS) {
       name: topic.name.en,
       description: topic.description.en,
       order: topic.order,
+      status: "published",
     },
   });
   for (const locale of ["ps", "fa"] as const)

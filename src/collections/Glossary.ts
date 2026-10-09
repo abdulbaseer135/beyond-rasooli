@@ -6,6 +6,7 @@ export const Glossary: CollectionConfig = {
   admin: {
     useAsTitle: "termEn",
     defaultColumns: ["termEn", "termPs", "termFa", "doNotTranslate"],
+    hidden: true,
   },
   access: {
     read: ({ req }) => Boolean(req.user),

@@ -1,3 +1,4 @@
+import { publishControlsField } from "./shared/publish-controls";
 import { creationHelpField } from "./shared/creation-help";
 import { randomUUID } from "node:crypto";
 import { archiveBeforeDelete } from "./shared/validation";
@@ -43,27 +44,77 @@ export const Videos: CollectionConfig = {
     afterChange: [contentChanged],
     beforeDelete: [archiveBeforeDelete],
     afterDelete: [
-      () => {
+      ({ req, id }) => {
         import("@/lib/data/cache-revalidate").then(({ invalidateCache }) => {
           invalidateCache("cms:videos");
           invalidateCache("cms:library");
+        });
+        import("@/lib/notifications").then(({ resolveFounderNotifications }) => {
+          resolveFounderNotifications({
+            payload: req.payload,
+            targetCollection: "videos",
+            targetId: id,
+          }).catch(() => {});
         });
       },
     ],
   },
   fields: [
+    publishControlsField(),
     creationHelpField(),
     {
       type: "tabs",
       tabs: [
         {
-          label: "Content",
+          label: "Video Details",
           fields: [
             {
               name: "title",
               type: "text",
               required: true,
-              label: "Title",
+              label: "Video Title",
+              admin: {
+                description: "Title of the video explainer",
+              },
+            },
+            {
+              name: "youtubeUrl",
+              type: "text",
+              required: true,
+              label: "YouTube Video URL",
+              admin: {
+                description: "Standard YouTube link or Shorts URL (e.g. https://youtu.be/... or https://youtube.com/shorts/...)",
+              },
+            },
+            {
+              name: "youtubeAutofill",
+              type: "ui",
+              admin: {
+                components: {
+                  Field:
+                    "/src/components/admin/YouTubeAutofill#YouTubeAutofill",
+                },
+              },
+            },
+            {
+              name: "description",
+              type: "textarea",
+              label: "Description / Summary",
+              admin: {
+                description:
+                  "Concise overview shown below the video player and on cards. Also used as video summary.",
+              },
+            },
+            {
+              name: "topic",
+              label: "Topic",
+              type: "relationship",
+              relationTo: "topics",
+              admin: {
+                appearance: "select",
+                allowCreate: true,
+                description: "Primary editorial topic",
+              },
             },
             {
               name: "language",
@@ -78,7 +129,7 @@ export const Videos: CollectionConfig = {
               ],
               admin: {
                 description:
-                  "Page and text language (UI context, title, notes, transcript)",
+                  "Page context language (title, transcript, localized notes)",
               },
             },
             {
@@ -93,91 +144,76 @@ export const Videos: CollectionConfig = {
               ],
               admin: {
                 description:
-                  "Language of the actual voiceover audio in the video (distinct from page language)",
-              },
-            },
-            {
-              name: "slug",
-              type: "text",
-              index: true,
-              label: "Slug",
-              admin: {
-                description:
-                  "Language-specific URL slug (auto-generated from title if left blank)",
-                placeholder: "Leave empty to auto-generate from title",
-              },
-            },
-            {
-              name: "description",
-              type: "textarea",
-              label: "Summary / Video Description",
-              admin: {
-                description:
-                  "Overview shown below player and in video cards.",
-              },
-            },
-            {
-              name: "transcript",
-              type: "textarea",
-              label: "Video Transcript (in document language)",
-            },
-          ],
-        },
-        {
-          label: "Video",
-          fields: [
-            {
-              name: "youtubeUrl",
-              type: "text",
-              required: true,
-              label: "YouTube Embed URL or Shorts URL",
-            },
-            {
-              name: "youtubeAutofill",
-              type: "ui",
-              admin: {
-                components: {
-                  Field:
-                    "/src/components/admin/YouTubeAutofill#YouTubeAutofill",
-                },
+                  "Actual spoken audio language of the video voiceover (may differ from page language)",
               },
             },
             {
               name: "thumbnail",
               type: "upload",
               relationTo: "media",
-              label: "Custom Poster (falls back to YouTube poster if empty)",
+              label: "Thumbnail / Poster",
+              admin: {
+                description: "Custom poster image. If left blank, YouTube thumbnail is used automatically.",
+              },
             },
             {
               name: "duration",
               type: "text",
-              label: "Formatted Duration (e.g. 0:48)",
+              label: "Duration",
               defaultValue: "0:45",
               admin: {
                 description:
-                  "Enter duration as mm:ss (e.g. 0:48). Structured data seconds are calculated automatically.",
+                  "Formatted duration mm:ss (e.g. 0:48). Total seconds are calculated automatically.",
               },
             },
-          ],
-        },
-        {
-          label: "Classification",
-          fields: [
             {
-              name: "topic",
-              label: "Topic",
+              name: "relatedArticle",
               type: "relationship",
-              relationTo: "topics",
+              relationTo: "articles",
+              label: "Related Article (Go Deeper)",
               admin: {
                 appearance: "select",
-                allowCreate: true,
-                description: "Select topic or click + to create a new topic",
+                allowCreate: false,
+                description:
+                  "Optional companion long-form article. Powers the Go Deeper bridge under the video player.",
+              },
+            },
+            {
+              name: "slug",
+              type: "text",
+              index: true,
+              label: "URL Slug",
+              admin: {
+                description:
+                  "Auto-generated from title if left blank",
+                placeholder: "Leave empty to auto-generate from title",
+              },
+            },
+            {
+              name: "sources",
+              type: "array",
+              label: "Cited Sources & Studies",
+              fields: sourceFields,
+              admin: {
+                initCollapsed: true,
+                description: "Optional research studies and citations",
+              },
+            },
+            {
+              name: "transcript",
+              type: "textarea",
+              label: "Video Transcript",
+              admin: {
+                description: "Full transcript in page language for accessibility and search",
               },
             },
             {
               name: "tags",
               type: "array",
               label: "Tags",
+              admin: {
+                initCollapsed: true,
+              },
               fields: [
                 {
                   name: "tag",
@@ -186,33 +222,10 @@ export const Videos: CollectionConfig = {
                 },
               ],
             },
-            {
-              name: "relatedArticle",
-              type: "relationship",
-              relationTo: "articles",
-              label: "Linked In-Depth Article",
-              admin: {
-                appearance: "select",
-                allowCreate: false,
-                description:
-                  "Linked in-depth article. Triggers the Go-Deeper card under the player.",
-              },
-            },
           ],
         },
         {
-          label: "Evidence",
-          fields: [
-            {
-              name: "sources",
-              type: "array",
-              label: "Key Sources & Studies Cited",
-              fields: sourceFields,
-            },
-          ],
-        },
-        {
-          label: "Publishing",
+          label: "Publishing & Approvals",
           fields: [
             {
               name: "status",
@@ -231,7 +244,7 @@ export const Videos: CollectionConfig = {
               required: true,
               options: [
                 { label: "Draft", value: "draft" },
-                { label: "In Review", value: "in_review" },
+                { label: "In Review (Submit for Approval)", value: "in_review" },
                 { label: "Scheduled", value: "scheduled" },
                 { label: "Published", value: "published" },
                 { label: "Archived", value: "archived" },
@@ -241,18 +254,55 @@ export const Videos: CollectionConfig = {
               name: "publishedAt",
               type: "date",
               label: "Publication Date (UTC)",
+              admin: {
+                condition: (data, siblingData, { user }) => user?.role === "admin",
+              },
             },
             {
               name: "featuredOrder",
               type: "number",
-              label: "Featured / Pin Order (0 for not pinned)",
+              label: "Featured / Pin Order (0 for standard)",
               defaultValue: 0,
+              admin: {
+                condition: (data, siblingData, { user }) => user?.role === "admin",
+              },
             },
-          ],
-        },
-        {
-          label: "Translations",
-          fields: [
+            {
+              name: "reviewDecision",
+              type: "select",
+              defaultValue: "none",
+              label: "Founder Review Decision",
+              options: [
+                { label: "None / Pending", value: "none" },
+                { label: "Changes Requested", value: "changes_requested" },
+                { label: "Approved", value: "approved" },
+                { label: "Rejected", value: "rejected" },
+              ],
+              access: {
+                update: ({ req: { user } }) => user?.role === "admin",
+              },
+              admin: {
+                condition: (data, siblingData, { user }) => user?.role === "admin",
+              },
+            },
+            {
+              name: "reviewNotes",
+              type: "textarea",
+              label: "Founder Feedback / Revision Notes",
+              admin: {
+                description: "Feedback visible to the editor if changes are requested or content is rejected",
+              },
+            },
+            {
+              name: "submittedBy",
+              type: "relationship",
+              relationTo: "users",
+              label: "Submitted By (Editor)",
+              admin: {
+                readOnly: true,
+                description: "Editor who submitted this content for approval",
+              },
+            },
             {
               name: "editorialTools",
               type: "ui",
@@ -276,20 +326,15 @@ export const Videos: CollectionConfig = {
                 { label: "Reviewed & Approved", value: "reviewed" },
               ],
             },
-          ],
-        },
-        {
-          label: "SEO",
-          fields: [
             {
               name: "seoTitle",
               type: "text",
-              label: "SEO Title (defaults to video title if blank)",
+              label: "Custom SEO Title (defaults to video title if blank)",
             },
             {
               name: "metaDescription",
               type: "textarea",
-              label: "Meta Description (defaults to summary if blank)",
+              label: "Custom Meta Description (defaults to summary if blank)",
             },
             {
               name: "ogImage",
@@ -297,35 +342,27 @@ export const Videos: CollectionConfig = {
               relationTo: "media",
               label: "Social Share / OpenGraph Image (defaults to video poster)",
             },
-          ],
-        },
-        {
-          label: "Advanced",
-          fields: [
+            // Technical internal fields (preserved on database model, hidden from routine editing)
             {
               name: "durationSeconds",
               type: "number",
-              label: "Duration in Seconds (for structured data)",
               defaultValue: 45,
               admin: {
-                readOnly: true,
-                description: "Auto-calculated from formatted duration",
+                condition: () => false,
               },
             },
             {
               name: "remotePosterUrl",
               type: "text",
               admin: {
-                readOnly: true,
-                description: "Remote YouTube poster thumbnail URL",
+                condition: () => false,
               },
             },
             {
               name: "summary",
               type: "textarea",
               admin: {
-                readOnly: true,
-                description: "Synchronized with description",
+                condition: () => false,
               },
             },
             {
@@ -335,35 +372,33 @@ export const Videos: CollectionConfig = {
               required: true,
               index: true,
               admin: {
-                readOnly: true,
-                description:
-                  "Shared unique identifier linking translations of this video page",
+                condition: () => false,
               },
             },
             {
               name: "translatedFromLocale",
               type: "select",
               options: ["ps", "fa", "en"],
-              admin: { readOnly: true },
+              admin: { condition: () => false },
             },
-            { name: "translatedAt", type: "date", admin: { readOnly: true } },
-            { name: "reviewedAt", type: "date", admin: { readOnly: true } },
+            { name: "translatedAt", type: "date", admin: { condition: () => false } },
+            { name: "reviewedAt", type: "date", admin: { condition: () => false } },
             {
               name: "reviewedBy",
               type: "relationship",
               relationTo: "users",
-              admin: { readOnly: true },
+              admin: { condition: () => false },
             },
             {
               name: "sourceChanged",
               type: "checkbox",
               defaultValue: false,
-              admin: { readOnly: true },
+              admin: { condition: () => false },
             },
             {
               name: "sourceHashAtTranslation",
               type: "text",
-              admin: { readOnly: true },
+              admin: { condition: () => false },
             },
           ],
         },

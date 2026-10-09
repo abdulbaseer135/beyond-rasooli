@@ -10,6 +10,10 @@ export async function invalid(req: PayloadRequest, path: string, key: keyof type
   throw new ValidationError({ errors: [{ path, message }], req });
 }
 export const archiveBeforeDelete: CollectionBeforeDeleteHook = async ({ req, id, collection }) => {
+  // Founder (admin) and system/script contexts are permitted to delete directly
+  if (req.user?.role === "admin" || !req.user || req.context?.allowDeletePublished) {
+    return;
+  }
   const doc = await req.payload.findByID({ collection: collection.slug, id, locale: "all", req, overrideAccess: true, depth: 0 });
   const status = (doc as unknown as { status?: unknown }).status;
   const statuses = typeof status === "object" && status ? Object.values(status) : [status];

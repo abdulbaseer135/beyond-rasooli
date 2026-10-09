@@ -14,7 +14,8 @@
     "test": "tsx --test tests/*.test.ts",
     "check-launch": "tsx scripts/check-launch.ts",
     "seed:localization": "tsx scripts/seed-localization.ts",
-    "migrate:founder-workflow": "node scripts/migrate-founder-workflow.mjs"
+    "migrate:founder-workflow": "node scripts/migrate-founder-workflow.mjs",
+    "migrate:editor-workflow": "node scripts/migrate-editor-workflow.mjs"
   },
   "dependencies": {
     "@payloadcms/db-postgres": "^3.90.2",

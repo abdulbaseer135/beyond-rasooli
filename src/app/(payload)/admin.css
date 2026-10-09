@@ -1,3 +1,8 @@
+@layer theme, base, components, utilities;
+
+@import "tailwindcss/theme" layer(theme);
+@import "tailwindcss/utilities" layer(utilities);
+
 :root {
   --theme-bg: #faf7f0;
   --theme-text: #1b1b18;
@@ -322,3 +327,77 @@ textarea {
   font-size: 13px;
   color: #5a5a52;
 }
+
+/* Custom Founder and Editor Admin Views */
+.br-custom-admin-container {
+  font-family: var(--font-body);
+  background-color: var(--theme-bg, #faf7f0);
+  color: var(--theme-text, #1b1b18);
+  min-height: 100vh;
+}
+
+.br-custom-admin-container h1,
+.br-custom-admin-container h2,
+.br-custom-admin-container h3 {
+  font-family: var(--font-serif);
+}
+
+.br-custom-admin-container a {
+  text-decoration: none;
+}
+
+/* ==========================================================================
+   Payload CMS Collection List & Table Restorations
+   ========================================================================== */
+
+/* Ensure generous, readable table padding for collections */
+.table th,
+.table td {
+  padding-block: 14px !important;
+  padding-inline: 16px !important;
+  vertical-align: middle !important;
+}
+
+/* Ensure checkbox column has proper dedicated width and spacing */
+.table th.cell-_select,
+.table td.cell-_select {
+  width: 48px !important;
+  min-width: 48px !important;
+  max-width: 56px !important;
+  padding-inline: 12px !important;
+  text-align: center !important;
+}
+
+.table th:first-child,
+.table td:first-child {
+  padding-inline-start: 16px !important;
+}
+
+/* Ensure search input doesn't overlap magnifying glass */
+.search-filter__input {
+  min-height: 42px !important;
+  padding-inline-start: 42px !important;
+  border-radius: 4px !important;
+}
+
+[dir="rtl"] .search-filter__input {
+  padding-inline-start: 16px !important;
+  padding-inline-end: 42px !important;
+}
+
+/* Refined table rows */
+.table tbody tr {
+  border-bottom: 1px solid var(--theme-elevation-150, #e3ded2);
+  transition: background-color 0.15s ease;
+}
+
+.table tbody tr:hover {
+  background-color: var(--theme-elevation-100, #eae4d5) !important;
+}
+
+/* Collection list header */
+.collection-list__header {
+  margin-bottom: 20px;
+}
+
+

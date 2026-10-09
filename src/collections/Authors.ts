@@ -6,6 +6,7 @@ export const Authors: CollectionConfig = {
   admin: {
     useAsTitle: "name",
     defaultColumns: ["name", "updatedAt"],
+    hidden: true, // Automatically managed and synchronized from user accounts
   },
   access: {
     read: () => true,

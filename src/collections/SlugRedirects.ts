@@ -5,6 +5,7 @@ export const SlugRedirects: CollectionConfig = {
   admin: {
     useAsTitle: "sourceSlug",
     group: "Settings",
+    hidden: true,
     defaultColumns: ["sourceSlug", "destinationSlug", "kind", "language"],
   },
   access: {

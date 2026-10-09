@@ -21,6 +21,7 @@ import { Collections } from './collections/Collections';
 import { Pages } from './collections/Pages';
 import { UIStrings } from './collections/UIStrings';
 import { Contacts } from './collections/Contacts';
+import { Notifications } from './collections/Notifications';
 import { SiteSettings } from './globals/SiteSettings';
 
 const filename = fileURLToPath(import.meta.url);
@@ -35,6 +36,11 @@ const dbAdapter = isPostgres
   ? postgresAdapter({
       pool: {
         connectionString: databaseUri,
+        max: 10,
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 10000,
+        keepAlive: true,
+        keepAliveInitialDelayMillis: 10000,
       },
       push: false,
     })
@@ -54,6 +60,7 @@ export default buildConfig({
     user: Users.slug,
     importMap: { baseDir: path.resolve(dirname, '..'), importMapFile: path.resolve(dirname, 'app/(payload)/admin/importMap.js') },
     components: {
+      actions: ['/src/components/admin/NotificationBell#NotificationBell'],
       beforeNavLinks: ['/src/components/admin/QuickAdd#QuickAdd'],
       graphics: { Logo: '/src/components/admin/Brand#Logo', Icon: '/src/components/admin/Brand#Icon' },
       afterLogin: ['/src/components/admin/LoginFooter#LoginFooter'],
@@ -97,6 +104,7 @@ export default buildConfig({
     Pages,
     UIStrings,
     Contacts,
+    Notifications,
     TranslationUsage,
     SlugRedirects,
   ],

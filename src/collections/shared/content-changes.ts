@@ -77,5 +77,78 @@ export const contentChanged: CollectionAfterChangeHook = async ({
         data,
       });
   }
+
+  // Founder Notifications for Article & Video Review Workflow
+  if (["articles", "videos"].includes(collection.slug)) {
+    const isArticle = collection.slug === "articles";
+    const targetCol = collection.slug as "articles" | "videos";
+    const labelPrefix = isArticle ? "Article" : "Video";
+
+    const isNewSubmission =
+      doc.status === "in_review" && previousDoc?.status !== "in_review";
+    const isResubmission =
+      doc.status === "in_review" &&
+      previousDoc?.reviewDecision === "changes_requested";
+
+    if (isNewSubmission || isResubmission) {
+      const editorName =
+        (typeof doc.submittedBy === "object" && doc.submittedBy?.name) ||
+        req.user?.name ||
+        req.user?.email ||
+        "An editor";
+      const editorId =
+        (typeof doc.submittedBy === "object"
+          ? doc.submittedBy?.id
+          : doc.submittedBy) || req.user?.id;
+
+      const { createFounderNotification } = await import("@/lib/notifications");
+      if (isResubmission) {
+        await createFounderNotification({
+          payload: req.payload,
+          type: isArticle ? "article_resubmission" : "video_resubmission",
+          title: `${labelPrefix} Resubmission`,
+          message: `${editorName} resubmitted "${doc.title || "Untitled"}" for your approval.`,
+          actorId: editorId,
+          targetCollection: targetCol,
+          targetId: doc.id,
+          submissionRevision: `rev-${doc.updatedAt || Date.now()}`,
+          deduplicationKey: `${collection.slug}:${doc.id}:resubmission:${doc.updatedAt || Date.now()}`,
+          link: `/admin/content-approvals?type=${isArticle ? "article" : "video"}&id=${doc.id}`,
+        });
+      } else {
+        await createFounderNotification({
+          payload: req.payload,
+          type: isArticle ? "article_approval" : "video_approval",
+          title: `New ${labelPrefix} Awaiting Approval`,
+          message: `${editorName} submitted "${doc.title || "Untitled"}" for your approval.`,
+          actorId: editorId,
+          targetCollection: targetCol,
+          targetId: doc.id,
+          submissionRevision: `rev-${doc.updatedAt || Date.now()}`,
+          deduplicationKey: `${collection.slug}:${doc.id}:submission:${doc.updatedAt || Date.now()}`,
+          link: `/admin/content-approvals?type=${isArticle ? "article" : "video"}&id=${doc.id}`,
+        });
+      }
+    }
+
+    if (
+      (doc.status === "published" ||
+        doc.reviewDecision === "approved" ||
+        doc.reviewDecision === "rejected" ||
+        doc.reviewDecision === "changes_requested") &&
+      previousDoc?.status === "in_review"
+    ) {
+      const { resolveFounderNotifications } = await import(
+        "@/lib/notifications"
+      );
+      await resolveFounderNotifications({
+        payload: req.payload,
+        targetCollection: targetCol,
+        targetId: doc.id,
+      });
+    }
+  }
+
   return doc;
 };
+

@@ -79,6 +79,7 @@ export default async function LocaleLayout({
       lang={meta.htmlLang}
       dir={meta.dir}
       className={fontVariables}
+      data-scroll-behavior="smooth"
       suppressHydrationWarning
     >
       <body className="min-h-screen flex flex-col bg-[var(--bg)] text-[var(--ink)] antialiased">

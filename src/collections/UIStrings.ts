@@ -11,6 +11,7 @@ export const UIStrings: CollectionConfig = {
   admin: {
     useAsTitle: "key",
     defaultColumns: ["key", "namespace", "statusPs", "statusFa"],
+    hidden: true,
   },
   access: {
     read: () => true,

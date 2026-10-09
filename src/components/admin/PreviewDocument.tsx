@@ -4,6 +4,7 @@ import {
   useLivePreview,
 } from "@payloadcms/live-preview-react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import Image from "next/image";
 import { ArticleHeader } from "@/components/article/ArticleHeader";
@@ -66,13 +67,13 @@ export function PreviewDocument({
             {t("preview_draft_notice")}
           </span>
         </div>
-        <a
+        <Link
           href="/admin"
           className="text-link"
           style={{ fontSize: "13px", minHeight: "auto", textDecoration: "none" }}
         >
           [{t("back_to_admin")}]
-        </a>
+        </Link>
       </div>
       {"body" in data && "summary" in data ? (
         <ArticleHeader

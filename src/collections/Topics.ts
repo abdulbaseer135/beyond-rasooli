@@ -5,20 +5,25 @@ import type { CollectionConfig } from "payload";
 export const Topics: CollectionConfig = {
   slug: "topics",
   access: {
-    read: () => true,
+    read: ({ req }) =>
+      req.user ? true : { status: { equals: "published" } },
     create: ({ req }) => Boolean(req.user),
     update: ({ req }) => Boolean(req.user),
     delete: ({ req }) => req.user?.role === "admin",
   },
   admin: {
     useAsTitle: "name",
-    defaultColumns: ["name", "slug", "order"],
+    defaultColumns: ["name", "slug", "status"],
   },
   hooks: {
     beforeValidate: [
-      ({ data }) => {
+      ({ data, req }) => {
         if (data && (!data.slug || !String(data.slug).trim()) && data.name) {
           data.slug = slugify(String(data.name));
+        }
+        // Editors proposing a new topic cannot publish it directly
+        if (req.user?.role !== "admin" && data) {
+          data.status = "pending";
         }
         return data;
       },
@@ -32,10 +37,17 @@ export const Topics: CollectionConfig = {
       },
     ],
     afterDelete: [
-      () => {
+      ({ req, id }) => {
         import("@/lib/data/cache-revalidate").then(({ invalidateCache }) => {
           invalidateCache("cms:topics");
           invalidateCache("cms:library");
+        });
+        import("@/lib/notifications").then(({ resolveFounderNotifications }) => {
+          resolveFounderNotifications({
+            payload: req.payload,
+            targetCollection: "topics" as any,
+            targetId: id,
+          }).catch(() => {});
         });
       },
     ],
@@ -61,6 +73,24 @@ export const Topics: CollectionConfig = {
       },
     },
     {
+      name: "status",
+      type: "select",
+      required: true,
+      defaultValue: "published",
+      admin: {
+        position: "sidebar",
+        description: "Topic publication status (editor proposals require founder approval)",
+      },
+      options: [
+        { label: "Published (Public)", value: "published" },
+        { label: "Pending Founder Approval", value: "pending" },
+        { label: "Draft", value: "draft" },
+      ],
+      access: {
+        update: ({ req: { user } }) => user?.role === "admin",
+      },
+    },
+    {
       name: "description",
       type: "textarea",
       localized: true,
@@ -78,6 +108,7 @@ export const Topics: CollectionConfig = {
       defaultValue: 0,
       label: "Display Order",
       admin: {
+        condition: (data, siblingData, { user }) => user?.role === "admin",
         description: "Display order on homepage and topic navigation (lower numbers appear first)",
       },
     },

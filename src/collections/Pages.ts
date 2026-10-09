@@ -14,6 +14,8 @@ export const Pages: CollectionConfig = {
         `/${data.language || locale?.code || "en"}/preview?collection=pages&id=${data.id}`,
     },
     useAsTitle: "title",
+    group: "Website Management",
+    hidden: ({ user }) => user?.role !== "admin",
     defaultColumns: [
       "title",
       "slug",
@@ -43,9 +45,8 @@ export const Pages: CollectionConfig = {
               },
             ],
           } as AccessResult),
-    update: ({ req: { user } }) => Boolean(user),
-    create: ({ req: { user } }) =>
-      user?.role === "admin" || user?.role === "editor",
+    update: ({ req: { user } }) => user?.role === "admin",
+    create: ({ req: { user } }) => user?.role === "admin",
     delete: ({ req: { user } }) => user?.role === "admin",
   },
   hooks: {

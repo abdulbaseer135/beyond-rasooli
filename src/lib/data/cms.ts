@@ -237,6 +237,7 @@ const getCachedLibrary = unstable_cache(
         ...d,
         id: String(d.id),
         slug: d.slug || "",
+        translationGroup: d.translationGroup || String(d.id),
         summary: d.summary || "",
         description: d.summary || "",
         topicSlug: topic?.slug || "",
@@ -272,6 +273,7 @@ const getCachedLibrary = unstable_cache(
         ...d,
         id: String(d.id),
         slug: d.slug || "",
+        translationGroup: d.translationGroup || String(d.id),
         description: d.description || "",
         topicSlug: topic?.slug || "",
         topicName: topic?.name || "",
@@ -302,6 +304,7 @@ const getCachedLibrary = unstable_cache(
       .filter(
         (d) =>
           d.name &&
+          (!("status" in d) || (d as { status?: string }).status === "published") &&
           (articles.some((a) => a.topicSlug === d.slug) ||
             videos.some((v) => v.topicSlug === d.slug)),
       )
@@ -507,6 +510,7 @@ export const getArticleBySlug = cache(
       ...d,
       id: String(d.id),
       slug: d.slug || "",
+      translationGroup: d.translationGroup || String(d.id),
       summary: d.summary || "",
       description: d.summary || "",
       topicSlug: topic?.slug || "",
@@ -580,6 +584,7 @@ export const getVideoBySlug = cache(
       ...d,
       id: String(d.id),
       slug: d.slug || "",
+      translationGroup: d.translationGroup || String(d.id),
       description: d.description || "",
       topicSlug: topic?.slug || "",
       topicName: topic?.name || "",

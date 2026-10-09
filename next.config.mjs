@@ -1,12 +1,25 @@
-import createNextIntlPlugin from 'next-intl/plugin';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { withPayload } from '@payloadcms/next/withPayload';
 
-const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   distDir: process.env.BEYOND_QA === 'true' ? '.next-qa' : '.next',
+  turbopack: {
+    resolveAlias: {
+      'next-intl/config': './src/i18n/request.ts',
+    },
+  },
+  webpack(config) {
+    config.resolve = config.resolve || {};
+    config.resolve.alias = config.resolve.alias || {};
+    config.resolve.alias['next-intl/config'] = path.resolve(__dirname, './src/i18n/request.ts');
+    return config;
+  },
   images: {
     remotePatterns: [
       {
@@ -58,4 +71,4 @@ const nextConfig = {
   },
 };
 
-export default withPayload(withNextIntl(nextConfig));
+export default withPayload(nextConfig);

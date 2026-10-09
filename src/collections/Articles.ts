@@ -1,3 +1,4 @@
+import { publishControlsField } from "./shared/publish-controls";
 import { creationHelpField } from "./shared/creation-help";
 import { randomUUID } from "node:crypto";
 import { archiveBeforeDelete } from "./shared/validation";
@@ -43,27 +44,115 @@ export const Articles: CollectionConfig = {
     afterChange: [contentChanged],
     beforeDelete: [archiveBeforeDelete],
     afterDelete: [
-      () => {
+      ({ req, id }) => {
         import("@/lib/data/cache-revalidate").then(({ invalidateCache }) => {
           invalidateCache("cms:articles");
           invalidateCache("cms:library");
+        });
+        import("@/lib/notifications").then(({ resolveFounderNotifications }) => {
+          resolveFounderNotifications({
+            payload: req.payload,
+            targetCollection: "articles",
+            targetId: id,
+          }).catch(() => {});
         });
       },
     ],
   },
   fields: [
+    publishControlsField(),
     creationHelpField(),
     {
       type: "tabs",
       tabs: [
         {
-          label: "Content",
+          label: "Article Content",
           fields: [
             {
               name: "title",
               type: "text",
               required: true,
-              label: "Title",
+              label: "Article Title",
+            },
+            {
+              name: "slug",
+              type: "text",
+              index: true,
+              label: "URL Slug",
+              admin: {
+                description:
+                  "Language-specific URL slug (auto-generated from title if left blank)",
+                placeholder: "Leave empty to auto-generate from title",
+              },
+            },
+            {
+              name: "summary",
+              type: "textarea",
+              label: "Summary / Standfirst",
+              defaultValue: "",
+              admin: {
+                description:
+                  "Short description displayed on article cards and article headers",
+              },
+            },
+            {
+              name: "body",
+              type: "richText",
+              label: "Article Body",
+            },
+            {
+              name: "topic",
+              label: "Topic",
+              type: "relationship",
+              relationTo: "topics",
+              admin: {
+                appearance: "select",
+                allowCreate: true,
+                description: "Primary editorial topic (required when publishing)",
+              },
+            },
+            {
+              name: "coverImage",
+              type: "upload",
+              relationTo: "media",
+              label: "Cover Image",
+            },
+            {
+              name: "coverAlt",
+              type: "text",
+              label: "Cover Image Alt Text",
+            },
+            {
+              name: "author",
+              label: "Author",
+              type: "relationship",
+              relationTo: "users",
+              admin: {
+                readOnly: true,
+                description:
+                  "Author byline. Automatically populated with the authenticated contributor's account.",
+              },
+            },
+            {
+              name: "authorProfile",
+              label: "Author Profile",
+              type: "relationship",
+              relationTo: "authors",
+              admin: {
+                condition: () => false,
+              },
+            },
+            {
+              name: "relatedVideo",
+              type: "relationship",
+              relationTo: "videos",
+              label: "Related Companion Video",
+              admin: {
+                appearance: "select",
+                allowCreate: false,
+                description:
+                  "Optional companion short video embed at the top of the article",
+              },
             },
             {
               name: "language",
@@ -81,83 +170,35 @@ export const Articles: CollectionConfig = {
               },
             },
             {
-              name: "slug",
-              type: "text",
-              index: true,
-              label: "Slug",
+              name: "sources",
+              type: "array",
+              label: "Sources & References",
+              fields: sourceFields,
               admin: {
-                description:
-                  "Language-specific URL slug (auto-generated from title if left blank)",
-                placeholder: "Leave empty to auto-generate from title",
+                initCollapsed: true,
+                description: "Scientific citations and evidence papers",
               },
             },
             {
-              name: "summary",
-              type: "textarea",
-              label: "Standfirst / Summary",
-              admin: {
-                description:
-                  "Appears before body. Italic in English; regular slightly larger in Arabic script.",
-              },
-            },
-            {
-              name: "body",
-              type: "richText",
-              label: "Article Content",
-            },
-            {
-              name: "partsEnabled",
-              type: "checkbox",
-              label: "Split into numbered parts (Part 1, Part 2, etc.)",
-              defaultValue: false,
-            },
-          ],
-        },
-        {
-          label: "Media",
-          fields: [
-            {
-              name: "coverImage",
-              type: "upload",
-              relationTo: "media",
-              label: "Cover Image",
-            },
-            {
-              name: "coverAlt",
-              type: "text",
-              label: "Cover Alt Text (document language, falls back to media alt)",
-            },
-            {
-              name: "coverCaption",
-              type: "text",
-              label: "Cover Image Caption",
-            },
-          ],
-        },
-        {
-          label: "Classification",
-          fields: [
-            {
-              name: "authorProfile",
-              label: "Author",
-              type: "relationship",
-              relationTo: "authors",
-              admin: {
-                appearance: "select",
-                allowCreate: true,
-                description: "Select existing author or click + to create a new author profile",
-              },
-            },
-            {
-              name: "topic",
-              label: "Topic",
-              type: "relationship",
-              relationTo: "topics",
-              admin: {
-                appearance: "select",
-                allowCreate: true,
-                description: "Select primary editorial topic or click + to create new topic",
-              },
+              name: "evidenceNote",
+              type: "group",
+              label: "Evidence Status Note",
+              fields: [
+                {
+                  name: "status",
+                  type: "select",
+                  options: [
+                    { label: "Established Finding", value: "established" },
+                    { label: "Emerging Research", value: "emerging" },
+                    { label: "Active Scientific Debate", value: "debated" },
+                  ],
+                },
+                {
+                  name: "text",
+                  type: "text",
+                  label: "Evidence note summary",
+                },
+              ],
             },
             {
               name: "format",
@@ -174,6 +215,9 @@ export const Articles: CollectionConfig = {
               name: "tags",
               type: "array",
               label: "Tags",
+              admin: {
+                initCollapsed: true,
+              },
               fields: [
                 {
                   name: "tag",
@@ -183,53 +227,23 @@ export const Articles: CollectionConfig = {
               ],
             },
             {
-              name: "relatedVideo",
-              type: "relationship",
-              relationTo: "videos",
-              label: "Related Companion Video",
+              name: "partsEnabled",
+              type: "checkbox",
+              label: "Split into numbered parts (Part 1, Part 2, etc.)",
+              defaultValue: false,
+            },
+            {
+              name: "coverCaption",
+              type: "text",
+              label: "Cover Image Caption",
               admin: {
-                appearance: "select",
-                allowCreate: false,
-                description:
-                  "Companion short video embed at the top of the article",
+                condition: (data) => Boolean(data?.coverImage),
               },
             },
           ],
         },
         {
-          label: "Evidence",
-          fields: [
-            {
-              name: "sources",
-              type: "array",
-              label: "Sources & Further Reading (Structured References)",
-              fields: sourceFields,
-            },
-            {
-              name: "evidenceNote",
-              type: "group",
-              label: "Evidence Note Box",
-              fields: [
-                {
-                  name: "status",
-                  type: "select",
-                  options: [
-                    { label: "Established Finding", value: "established" },
-                    { label: "Emerging Research", value: "emerging" },
-                    { label: "Active Scientific Debate", value: "debated" },
-                  ],
-                },
-                {
-                  name: "text",
-                  type: "text",
-                  label: "One-sentence evidence note explanation",
-                },
-              ],
-            },
-          ],
-        },
-        {
-          label: "Publishing",
+          label: "Publishing & Approvals",
           fields: [
             {
               name: "status",
@@ -248,7 +262,7 @@ export const Articles: CollectionConfig = {
               required: true,
               options: [
                 { label: "Draft", value: "draft" },
-                { label: "In Review", value: "in_review" },
+                { label: "In Review (Submit for Approval)", value: "in_review" },
                 { label: "Scheduled", value: "scheduled" },
                 { label: "Published", value: "published" },
                 { label: "Archived", value: "archived" },
@@ -258,12 +272,54 @@ export const Articles: CollectionConfig = {
               name: "publishedAt",
               type: "date",
               label: "Publication Date (UTC)",
+              admin: {
+                condition: (data, siblingData, { user }) => user?.role === "admin",
+              },
             },
             {
               name: "featuredOrder",
               type: "number",
-              label: "Featured / Pin Order (0 for standard order)",
+              label: "Featured / Pin Order (0 for standard)",
               defaultValue: 0,
+              admin: {
+                condition: (data, siblingData, { user }) => user?.role === "admin",
+              },
+            },
+            {
+              name: "reviewDecision",
+              type: "select",
+              defaultValue: "none",
+              label: "Founder Review Decision",
+              options: [
+                { label: "None / Pending", value: "none" },
+                { label: "Changes Requested", value: "changes_requested" },
+                { label: "Approved", value: "approved" },
+                { label: "Rejected", value: "rejected" },
+              ],
+              access: {
+                update: ({ req: { user } }) => user?.role === "admin",
+              },
+              admin: {
+                condition: (data, siblingData, { user }) => user?.role === "admin",
+              },
+            },
+            {
+              name: "reviewNotes",
+              type: "textarea",
+              label: "Founder Feedback / Revision Notes",
+              admin: {
+                description: "Feedback visible to the editor if changes are requested or content is rejected",
+              },
+            },
+            {
+              name: "submittedBy",
+              type: "relationship",
+              relationTo: "users",
+              label: "Submitted By (Editor)",
+              admin: {
+                readOnly: true,
+                description: "Editor who submitted this content for approval",
+              },
             },
             {
               name: "showUpdatedDate",
@@ -276,11 +332,6 @@ export const Articles: CollectionConfig = {
               type: "textarea",
               label: "Editorial correction note (displayed transparently if updated)",
             },
-          ],
-        },
-        {
-          label: "Translations",
-          fields: [
             {
               name: "editorialTools",
               type: "ui",
@@ -303,25 +354,16 @@ export const Articles: CollectionConfig = {
                 },
                 { label: "Reviewed & Approved", value: "reviewed" },
               ],
-              admin: {
-                description:
-                  "Machine drafts display an automatic notice on the public site and are noindexed until reviewed",
-              },
             },
-          ],
-        },
-        {
-          label: "SEO",
-          fields: [
             {
               name: "seoTitle",
               type: "text",
-              label: "SEO Title (defaults to article title if blank)",
+              label: "Custom SEO Title (defaults to article title if blank)",
             },
             {
               name: "metaDescription",
               type: "textarea",
-              label: "Meta Description (defaults to summary if blank)",
+              label: "Custom Meta Description (defaults to summary if blank)",
             },
             {
               name: "ogImage",
@@ -329,11 +371,14 @@ export const Articles: CollectionConfig = {
               relationTo: "media",
               label: "Social Share / OpenGraph Image (defaults to cover image)",
             },
-          ],
-        },
-        {
-          label: "Advanced",
-          fields: [
+            // Technical internal fields (preserved on database model, hidden from routine editing)
+            {
+              name: "readingTimeMinutes",
+              type: "number",
+              admin: {
+                condition: () => false,
+              },
+            },
             {
               name: "translationGroup",
               type: "text",
@@ -341,18 +386,7 @@ export const Articles: CollectionConfig = {
               required: true,
               index: true,
               admin: {
-                readOnly: true,
-                description:
-                  "Shared unique identifier linking translations of this article",
-              },
-            },
-            {
-              name: "readingTimeMinutes",
-              type: "number",
-              label: "Reading Time in Minutes",
-              admin: {
-                readOnly: true,
-                description: "Auto-calculated from body prose word count",
+                condition: () => false,
               },
             },
             {
@@ -363,36 +397,26 @@ export const Articles: CollectionConfig = {
                 { label: "Dari", value: "fa" },
                 { label: "English", value: "en" },
               ],
-              admin: { readOnly: true },
+              admin: { condition: () => false },
             },
-            { name: "translatedAt", type: "date", admin: { readOnly: true } },
-            { name: "reviewedAt", type: "date", admin: { readOnly: true } },
+            { name: "translatedAt", type: "date", admin: { condition: () => false } },
+            { name: "reviewedAt", type: "date", admin: { condition: () => false } },
             {
               name: "reviewedBy",
               type: "relationship",
               relationTo: "users",
-              admin: { readOnly: true },
+              admin: { condition: () => false },
             },
             {
               name: "sourceChanged",
               type: "checkbox",
               defaultValue: false,
-              admin: {
-                readOnly: true,
-                description: "Flagged automatically when source language changes",
-              },
+              admin: { condition: () => false },
             },
             {
               name: "sourceHashAtTranslation",
               type: "text",
-              admin: { readOnly: true },
-            },
-            {
-              name: "author",
-              type: "relationship",
-              maxDepth: 0,
-              relationTo: "users",
-              admin: { condition: (data) => Boolean(data?.author) },
+              admin: { condition: () => false },
             },
           ],
         },

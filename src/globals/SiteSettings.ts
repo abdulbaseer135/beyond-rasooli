@@ -3,7 +3,8 @@ import type { GlobalConfig } from "payload";
 export const SiteSettings: GlobalConfig = {
   slug: "site-settings",
   admin: {
-    group: "Settings",
+    group: "Website Management",
+    hidden: ({ user }) => user?.role !== "admin",
   },
   access: {
     read: () => true,

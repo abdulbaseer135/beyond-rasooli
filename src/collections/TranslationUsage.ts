@@ -5,6 +5,7 @@ export const TranslationUsage: CollectionConfig = {
   admin: {
     useAsTitle: "requestKey",
     group: "Settings",
+    hidden: true,
     defaultColumns: [
       "month",
       "sourceLocale",

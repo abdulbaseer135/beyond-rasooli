@@ -5,6 +5,7 @@ export interface PublicArticle extends Omit<Article, "id" | "tags" | "slug" | "s
   slug: string;
   summary: string;
   description?: string;
+  translationGroup: string;
   topicSlug: string;
   topicName: string;
   tags: string[];
@@ -23,6 +24,7 @@ export interface PublicVideo extends Omit<Video, "id" | "tags" | "slug" | "descr
   id: string;
   slug: string;
   description: string;
+  translationGroup: string;
   topicSlug: string;
   topicName: string;
   tags: string[];

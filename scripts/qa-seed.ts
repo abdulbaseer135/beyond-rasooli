@@ -26,7 +26,8 @@ const admin =
       password: process.env.QA_ADMIN_PASSWORD || "Local-QA-only-9273!",
       name: "QA Editor",
       role: "admin",
-    },
+      status: "approved",
+    } as any,
     overrideAccess: true,
   }));
 const user = admin;
@@ -87,6 +88,7 @@ for (const locale of ["en", "ps", "fa"] as const) {
             : "\u0622\u0632\u0645\u0627\u06cc\u0634",
       description: "QA fixture only",
       order: 1,
+      status: "published",
     },
   });
   const sample =
