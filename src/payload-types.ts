@@ -466,6 +466,11 @@ export interface Video {
    */
   relatedArticle?: (number | null) | Article;
   /**
+   * Author byline. Automatically populated with the authenticated contributor's account.
+   */
+  author?: (number | null) | User;
+  authorProfile?: (number | null) | Author;
+  /**
    * Auto-generated from title if left blank
    */
   slug?: string | null;
@@ -1054,6 +1059,8 @@ export interface VideosSelect<T extends boolean = true> {
   thumbnail?: T;
   duration?: T;
   relatedArticle?: T;
+  author?: T;
+  authorProfile?: T;
   slug?: T;
   sources?:
     | T

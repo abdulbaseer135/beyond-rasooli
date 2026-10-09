@@ -1,4 +1,5 @@
 import { creationHelpField } from "./shared/creation-help";
+import { canAccessEditorial } from "./shared/auth-roles";
 import type { CollectionConfig } from "payload";
 
 export const Glossary: CollectionConfig = {
@@ -9,10 +10,10 @@ export const Glossary: CollectionConfig = {
     hidden: true,
   },
   access: {
-    read: ({ req }) => Boolean(req.user),
-    create: ({ req }) => Boolean(req.user),
-    update: ({ req }) => Boolean(req.user),
-    delete: ({ req }) => req.user?.role === "admin",
+    read: ({ req: { user } }) => canAccessEditorial(user),
+    create: ({ req: { user } }) => canAccessEditorial(user),
+    update: ({ req: { user } }) => canAccessEditorial(user),
+    delete: ({ req: { user } }) => user?.role === "admin",
   },
   fields: [
     creationHelpField(),

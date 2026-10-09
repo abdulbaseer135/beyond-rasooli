@@ -2,11 +2,12 @@ import en from "@/messages/en.json";
 import { NextResponse } from "next/server";
 import { getPayload } from "payload";
 import config from "@payload-config";
+import { canAccessEditorial } from "@/collections/shared/auth-roles";
 
 export async function GET(req: Request) {
   const payload = await getPayload({ config });
   const { user } = await payload.auth({ headers: req.headers });
-  if (!user)
+  if (!user || !canAccessEditorial(user))
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const docs = [];
   let page = 1;
@@ -62,7 +63,7 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const payload = await getPayload({ config });
   const { user } = await payload.auth({ headers: req.headers });
-  if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!user || !canAccessEditorial(user)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const { key, locale, status } = await req.json();
   if (
     typeof key !== "string" ||

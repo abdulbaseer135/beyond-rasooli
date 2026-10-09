@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { getPayload } from "payload";
 import config from "@payload-config";
+import { canAccessEditorial } from "@/collections/shared/auth-roles";
 export async function GET(req: Request) {
   const payload = await getPayload({ config });
   const { user } = await payload.auth({ headers: req.headers });
-  if (!user)
+  if (!user || !canAccessEditorial(user))
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const u = new URL(req.url);
   const collection =
@@ -74,7 +75,7 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const payload = await getPayload({ config });
   const { user } = await payload.auth({ headers: req.headers });
-  if (!user)
+  if (!user || !canAccessEditorial(user))
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   try {
     const { collection, id, title, text, body, transcript, seoTitle, metaDescription } = await req.json();

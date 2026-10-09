@@ -62,13 +62,17 @@ export const Users: CollectionConfig = {
             req,
             overrideAccess: true,
           });
-          if (users.totalDocs === 0) {
+          if (users.totalDocs === 0 && !req.context?.publicEditorRegistration) {
             data.role = "admin";
             data.status = "approved";
           } else if (req.user?.role !== "admin") {
             data.role = "editor";
             data.status = "pending";
+            if (!data.appliedAt) data.appliedAt = new Date().toISOString();
           }
+        }
+        if (data.status === "pending" && !data.appliedAt) {
+          data.appliedAt = new Date().toISOString();
         }
         return data;
       },
@@ -97,6 +101,15 @@ export const Users: CollectionConfig = {
     ],
     beforeChange: [
       async ({ data, originalDoc, req }) => {
+        if (req.user?.role !== "admin") {
+          if (originalDoc) {
+            data.role = originalDoc.role;
+            data.status = originalDoc.status;
+            data.rejectionReason = originalDoc.rejectionReason;
+            data.appliedAt = originalDoc.appliedAt;
+            data.authorProfile = originalDoc.authorProfile;
+          }
+        }
         if (
           originalDoc?.role === "admin" &&
           data.role &&
@@ -357,6 +370,9 @@ export const Users: CollectionConfig = {
       admin: {
         readOnly: true,
       },
+      access: {
+        update: ({ req: { user } }) => user?.role === "admin",
+      },
     },
     {
       name: "authorProfile",
@@ -366,6 +382,9 @@ export const Users: CollectionConfig = {
       admin: {
         readOnly: true,
         description: "Automatically synchronized public author profile",
+      },
+      access: {
+        update: ({ req: { user } }) => user?.role === "admin",
       },
     },
     {

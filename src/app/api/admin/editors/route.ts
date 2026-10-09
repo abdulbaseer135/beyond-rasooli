@@ -53,10 +53,36 @@ export async function POST(req: Request) {
       }
     }
 
+    // Verify target account is an editor (except for founder self-protection checks)
+    if (targetUser.role !== "editor" && action !== "suspend" && action !== "remove") {
+      return NextResponse.json(
+        { error: "Only contributor editor accounts can be approved or rejected." },
+        { status: 400 },
+      );
+    }
+
     const { resolveFounderNotifications } = await import("@/lib/notifications");
 
     switch (action) {
       case "approve": {
+        // Idempotency: if already approved, safely return success
+        if (targetUser.status === "approved") {
+          return NextResponse.json({
+            success: true,
+            message: `Editor ${targetUser.name} is already approved and active.`,
+          });
+        }
+
+        // Validate state transition: only pending accounts can be approved
+        if (targetUser.status !== "pending") {
+          return NextResponse.json(
+            {
+              error: `Cannot approve editor account in "${targetUser.status}" status. Only pending applications can be approved.`,
+            },
+            { status: 400 },
+          );
+        }
+
         await payload.update({
           collection: "users",
           id: userId,
@@ -78,6 +104,24 @@ export async function POST(req: Request) {
       }
 
       case "reject": {
+        // Idempotency: if already rejected, safely return success
+        if (targetUser.status === "rejected") {
+          return NextResponse.json({
+            success: true,
+            message: `Editor application for ${targetUser.name} is already rejected.`,
+          });
+        }
+
+        // Validate state transition: only pending accounts can be rejected
+        if (targetUser.status !== "pending") {
+          return NextResponse.json(
+            {
+              error: `Cannot reject editor account in "${targetUser.status}" status. Only pending applications can be rejected.`,
+            },
+            { status: 400 },
+          );
+        }
+
         await payload.update({
           collection: "users",
           id: userId,
@@ -99,6 +143,20 @@ export async function POST(req: Request) {
       }
 
       case "suspend": {
+        if (targetUser.role === "admin") {
+          return NextResponse.json(
+            { error: "Cannot suspend administrator accounts." },
+            { status: 400 },
+          );
+        }
+
+        if (targetUser.status === "suspended") {
+          return NextResponse.json({
+            success: true,
+            message: `Editor ${targetUser.name} is already suspended.`,
+          });
+        }
+
         await payload.update({
           collection: "users",
           id: userId,
@@ -114,6 +172,22 @@ export async function POST(req: Request) {
       }
 
       case "reactivate": {
+        if (targetUser.status === "approved") {
+          return NextResponse.json({
+            success: true,
+            message: `Editor ${targetUser.name} is already active.`,
+          });
+        }
+
+        if (targetUser.status !== "suspended") {
+          return NextResponse.json(
+            {
+              error: `Cannot reactivate editor in "${targetUser.status}" status. Only suspended accounts can be reactivated.`,
+            },
+            { status: 400 },
+          );
+        }
+
         await payload.update({
           collection: "users",
           id: userId,

@@ -10,6 +10,15 @@ function checkRateLimit(ip: string): boolean {
   const windowMs = 15 * 60 * 1000; // 15 minutes
   const maxRequests = 5;
 
+  // Prune map if large
+  if (rateLimitMap.size > 1000) {
+    for (const [key, timestamps] of rateLimitMap.entries()) {
+      if (timestamps.every((t) => now - t >= windowMs)) {
+        rateLimitMap.delete(key);
+      }
+    }
+  }
+
   const timestamps = rateLimitMap.get(ip) || [];
   const validTimestamps = timestamps.filter((t) => now - t < windowMs);
 
@@ -92,6 +101,20 @@ export async function POST(req: Request) {
 
     const payload = await getPayload({ config: configPromise });
 
+    const totalUsers = await payload.count({
+      collection: "users",
+      overrideAccess: true,
+    });
+    if (totalUsers.totalDocs === 0) {
+      return NextResponse.json(
+        {
+          error:
+            "Initial Founder account must be created before editor registrations can be accepted.",
+        },
+        { status: 503 },
+      );
+    }
+
     // 4. Check for existing account
     const existing = await payload.find({
       collection: "users",
@@ -141,6 +164,7 @@ export async function POST(req: Request) {
     const createdUser = await payload.create({
       collection: "users",
       overrideAccess: true,
+      context: { publicEditorRegistration: true },
       data: {
         name: trimmedName,
         email: trimmedEmail,
@@ -171,7 +195,7 @@ export async function POST(req: Request) {
       {
         success: true,
         message:
-          "Your application to become an editor at Beyond Rasooli has been submitted. The founder will review your application before access is granted.",
+          "Your application has been submitted successfully and is awaiting founder approval.",
       },
       { status: 201 },
     );

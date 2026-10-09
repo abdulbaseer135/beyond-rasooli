@@ -61,6 +61,12 @@ export async function POST(req: Request) {
     switch (action) {
       case "approve": {
         if (collection === "topics") {
+          if ((doc as any).status !== "pending") {
+            return NextResponse.json(
+              { error: `Topic is not awaiting approval (current status: ${(doc as any).status}).` },
+              { status: 400 },
+            );
+          }
           await payload.update({
             collection: "topics" as any,
             id,
@@ -75,7 +81,59 @@ export async function POST(req: Request) {
           });
         }
 
-        // For articles, videos, collections:
+        // For articles and videos: verify the document is actually awaiting review
+        if ((doc as any).status !== "in_review") {
+          return NextResponse.json(
+            {
+              error: `Document is not awaiting approval. Current status is "${(doc as any).status}".`,
+            },
+            { status: 400 },
+          );
+        }
+
+        // Concurrency check: if expectedUpdatedAt was supplied, ensure draft has not been modified
+        const { expectedUpdatedAt } = body || {};
+        if (expectedUpdatedAt && (doc as any).updatedAt !== expectedUpdatedAt) {
+          return NextResponse.json(
+            {
+              error:
+                "This document has been updated by the editor since it was loaded. Please review the latest revision before approving.",
+            },
+            { status: 409 },
+          );
+        }
+
+        // Validate required publication fields
+        const missing: string[] = [];
+        const docAny = doc as unknown as Record<string, unknown>;
+        if (!docAny.title || !String(docAny.title).trim()) missing.push("Title");
+        if (!docAny.language) missing.push("Language");
+        if (!docAny.topic) missing.push("Topic");
+
+        if (collection === "articles") {
+          if (!docAny.body) missing.push("Article Body");
+          if (!docAny.slug || !String(docAny.slug).trim()) missing.push("Slug");
+        } else if (collection === "videos") {
+          const { extractYouTubeId } = await import("@/lib/youtube");
+          if (!docAny.youtubeUrl || !extractYouTubeId(String(docAny.youtubeUrl))) {
+            missing.push("Valid YouTube URL");
+          }
+          if (!docAny.spokenLanguage) missing.push("Spoken Language");
+          if (!docAny.slug || !String(docAny.slug).trim()) missing.push("Slug");
+        }
+
+        if (missing.length > 0) {
+          return NextResponse.json(
+            {
+              error: `Cannot approve and publish: the following required fields are missing: ${missing.join(", ")}.`,
+            },
+            { status: 400 },
+          );
+        }
+
+        const nowIso = new Date().toISOString();
+
+        // Preserve author attribution and record founder approval metadata
         await payload.update({
           collection: collection as any,
           id,
@@ -86,9 +144,13 @@ export async function POST(req: Request) {
           },
           data: {
             status: "published",
-            publishedAt: new Date().toISOString(),
+            publishedAt: docAny.publishedAt || nowIso,
             reviewDecision: "approved",
             reviewNotes: "",
+            reviewedBy: user.id,
+            reviewedAt: nowIso,
+            author: docAny.author || docAny.submittedBy || user.id,
+            submittedBy: docAny.submittedBy || user.id,
           } as any,
         });
 

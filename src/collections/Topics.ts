@@ -1,5 +1,6 @@
 import { creationHelpField } from "./shared/creation-help";
 import { slugify } from "./shared/slug";
+import { canAccessEditorial } from "./shared/auth-roles";
 import type { CollectionConfig } from "payload";
 
 export const Topics: CollectionConfig = {
@@ -7,8 +8,8 @@ export const Topics: CollectionConfig = {
   access: {
     read: ({ req }) =>
       req.user ? true : { status: { equals: "published" } },
-    create: ({ req }) => Boolean(req.user),
-    update: ({ req }) => Boolean(req.user),
+    create: ({ req: { user } }) => canAccessEditorial(user),
+    update: ({ req: { user } }) => canAccessEditorial(user),
     delete: ({ req }) => req.user?.role === "admin",
   },
   admin: {

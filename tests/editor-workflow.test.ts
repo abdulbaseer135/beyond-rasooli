@@ -1,8 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { Users } from "../src/collections/Users";
-import { Articles } from "../src/collections/Articles";
-import { Videos } from "../src/collections/Videos";
 import { Topics } from "../src/collections/Topics";
 import { extractYouTubeId } from "../src/lib/youtube";
 import { calculateReadingTime } from "../src/collections/shared/publication";
@@ -119,3 +117,72 @@ test("YouTube URL extraction handles standard, shorts, and embed formats", () =>
     "dQw4w9WgXcQ"
   );
 });
+
+test("Users beforeValidate prevents publicEditorRegistration from obtaining admin role even if totalUsers is 0", async () => {
+  const beforeValidateHook = Users.hooks?.beforeValidate?.[0];
+  assert(beforeValidateHook, "beforeValidate hook must exist on Users");
+
+  const reqMock = {
+    payload: {
+      count: async () => ({ totalDocs: 0 }),
+    },
+    context: { publicEditorRegistration: true },
+  } as any;
+
+  const data = {
+    name: "Prospective Contributor",
+    email: "applicant@example.com",
+    password: "Password123456",
+    role: "editor",
+    status: "pending",
+  };
+
+  const result = await (beforeValidateHook as any)({
+    data,
+    operation: "create",
+    req: reqMock,
+  });
+
+  assert.equal(result.role, "editor", "Public registration must never become admin");
+  assert.equal(result.status, "pending", "Public registration must stay pending");
+});
+
+test("Users beforeChange prevents non-admin users from altering role or status", async () => {
+  const beforeChangeHook = Users.hooks?.beforeChange?.[0];
+  assert(beforeChangeHook, "beforeChange hook must exist on Users");
+
+  const nonAdminReq = {
+    user: { id: 5, role: "editor", status: "approved" },
+    payload: {},
+  } as any;
+
+  const originalDoc = {
+    id: 5,
+    role: "editor",
+    status: "approved",
+    rejectionReason: "",
+    appliedAt: "2026-10-01T00:00:00.000Z",
+    authorProfile: 10,
+  };
+
+  const maliciousData = {
+    role: "admin", // trying to elevate to admin
+    status: "approved",
+    rejectionReason: "hacked",
+    appliedAt: "2020-01-01T00:00:00.000Z",
+    authorProfile: 999,
+  };
+
+  const result = await (beforeChangeHook as any)({
+    data: maliciousData,
+    originalDoc,
+    req: nonAdminReq,
+  });
+
+  assert.equal(result.role, "editor", "Role elevation must be prevented");
+  assert.equal(result.status, "approved", "Status change must be reverted");
+  assert.equal(result.rejectionReason, "", "Rejection reason must be reverted");
+  assert.equal(result.appliedAt, "2026-10-01T00:00:00.000Z", "appliedAt must be preserved");
+  assert.equal(result.authorProfile, 10, "authorProfile must be preserved");
+});
+

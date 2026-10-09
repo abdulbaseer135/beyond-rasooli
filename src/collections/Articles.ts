@@ -31,11 +31,20 @@ export const Articles: CollectionConfig = {
     update: ({ req: { user }, data }) => {
       if (!user) return false;
       if (user.role === "admin") return true;
-      if (data?.status === "published" || data?.status === "archived")
+      if (user.role !== "editor" || (user.status && user.status !== "approved")) return false;
+      if (
+        data?.status === "published" ||
+        data?.status === "archived" ||
+        data?.status === "scheduled"
+      )
         return false;
       return true;
     },
-    create: ({ req: { user } }) => Boolean(user),
+    create: ({ req: { user } }) =>
+      Boolean(
+        user?.role === "admin" ||
+          (user?.role === "editor" && (user?.status === "approved" || !user?.status)),
+      ),
     delete: ({ req: { user } }) => user?.role === "admin",
   },
   hooks: {
@@ -132,6 +141,9 @@ export const Articles: CollectionConfig = {
                 description:
                   "Author byline. Automatically populated with the authenticated contributor's account.",
               },
+              access: {
+                update: ({ req: { user } }) => user?.role === "admin",
+              },
             },
             {
               name: "authorProfile",
@@ -140,6 +152,9 @@ export const Articles: CollectionConfig = {
               relationTo: "authors",
               admin: {
                 condition: () => false,
+              },
+              access: {
+                update: ({ req: { user } }) => user?.role === "admin",
               },
             },
             {
@@ -275,6 +290,9 @@ export const Articles: CollectionConfig = {
               admin: {
                 condition: (data, siblingData, { user }) => user?.role === "admin",
               },
+              access: {
+                update: ({ req: { user } }) => user?.role === "admin",
+              },
             },
             {
               name: "featuredOrder",
@@ -283,6 +301,9 @@ export const Articles: CollectionConfig = {
               defaultValue: 0,
               admin: {
                 condition: (data, siblingData, { user }) => user?.role === "admin",
+              },
+              access: {
+                update: ({ req: { user } }) => user?.role === "admin",
               },
             },
             {
@@ -310,6 +331,9 @@ export const Articles: CollectionConfig = {
               admin: {
                 description: "Feedback visible to the editor if changes are requested or content is rejected",
               },
+              access: {
+                update: ({ req: { user } }) => user?.role === "admin",
+              },
             },
             {
               name: "submittedBy",
@@ -319,6 +343,9 @@ export const Articles: CollectionConfig = {
               admin: {
                 readOnly: true,
                 description: "Editor who submitted this content for approval",
+              },
+              access: {
+                update: ({ req: { user } }) => user?.role === "admin",
               },
             },
             {

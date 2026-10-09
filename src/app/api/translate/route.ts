@@ -1,6 +1,7 @@
 import { getPayload } from "payload";
 import config from "@payload-config";
 import { NextResponse } from "next/server";
+import { canAccessEditorial } from "@/collections/shared/auth-roles";
 import {
   translateText,
   buildSystemPrompt,
@@ -13,7 +14,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const payload = await getPayload({ config });
   const { user } = await payload.auth({ headers: req.headers });
-  if (!user)
+  if (!user || !canAccessEditorial(user))
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   let body: TranslationRequest;
   try {

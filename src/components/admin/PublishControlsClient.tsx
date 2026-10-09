@@ -206,7 +206,7 @@ export function PublishControlsClient({
 
       setFeedback({
         type: "success",
-        text: `Your ${itemTypeLabel.toLowerCase()} has been submitted successfully and is awaiting Founder approval.`,
+        text: "Your content has been submitted and is awaiting founder approval.",
       });
     } catch {
       setFeedback({

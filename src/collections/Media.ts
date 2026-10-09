@@ -1,15 +1,16 @@
 import { invalid } from "./shared/validation";
 import { extractYouTubeId } from "@/lib/youtube";
 import { creationHelpField } from "./shared/creation-help";
+import { canAccessEditorial } from "./shared/auth-roles";
 import type { CollectionConfig } from "payload";
 
 export const Media: CollectionConfig = {
   slug: "media",
   access: {
     read: () => true,
-    create: ({ req }) => Boolean(req.user),
-    update: ({ req }) => Boolean(req.user),
-    delete: ({ req }) => req.user?.role === "admin",
+    create: ({ req: { user } }) => canAccessEditorial(user),
+    update: ({ req: { user } }) => canAccessEditorial(user),
+    delete: ({ req: { user } }) => user?.role === "admin",
   },
   hooks: { beforeOperation: [async ({ args, operation, req }) => {
     if (req.user && (operation === "create" || operation === "update")) {

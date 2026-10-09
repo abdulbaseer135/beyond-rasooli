@@ -107,8 +107,71 @@ export const contentState: CollectionBeforeChangeHook = async ({
     if (data.youtubeUrl !== undefined && !extractYouTubeId(data.youtubeUrl)) await invalid(req, "youtubeUrl", "youtube_invalid");
   }
 
-  if (collection.slug === "articles" && req.user) {
-    if (!data.author && !originalDoc?.author) data.author = req.user.id;
+  if (["articles", "videos"].includes(collection.slug) && req.user && req.user.role !== "admin" && !system) {
+    if (data.status === "published" || data.status === "scheduled" || data.status === "archived") {
+      throw new ValidationError({
+        errors: [{ path: "status", message: "Editors are not permitted to publish, schedule, or archive content directly. Please submit for founder approval." }],
+        req,
+      });
+    }
+
+    if (originalDoc?.id) {
+      if (originalDoc.status === "published" || originalDoc.status === "archived") {
+        throw new ValidationError({
+          errors: [{ path: "status", message: "Published or archived content cannot be edited directly by editors." }],
+          req,
+        });
+      }
+
+      const authorId = typeof originalDoc.author === "object" && originalDoc.author ? originalDoc.author.id : originalDoc.author;
+      const submitterId = typeof originalDoc.submittedBy === "object" && originalDoc.submittedBy ? originalDoc.submittedBy.id : originalDoc.submittedBy;
+      const isOwner =
+        (authorId !== undefined && String(authorId) === String(req.user.id)) ||
+        (submitterId !== undefined && String(submitterId) === String(req.user.id));
+
+      if (!isOwner) {
+        throw new ValidationError({
+          errors: [{ path: "author", message: "You are not authorized to edit another contributor's content." }],
+          req,
+        });
+      }
+
+      // Preserve founder decisions and published metadata against editor manipulation
+      data.author = originalDoc.author;
+      data.submittedBy = originalDoc.submittedBy;
+      if (originalDoc.reviewNotes !== undefined && data.reviewNotes === undefined) {
+        data.reviewNotes = originalDoc.reviewNotes;
+      }
+      if (data.reviewDecision && data.reviewDecision !== originalDoc.reviewDecision) {
+        data.reviewDecision = originalDoc.reviewDecision;
+      }
+      if (data.reviewNotes && data.reviewNotes !== originalDoc.reviewNotes) {
+        data.reviewNotes = originalDoc.reviewNotes;
+      }
+      if (data.publishedAt && data.publishedAt !== originalDoc.publishedAt) {
+        data.publishedAt = originalDoc.publishedAt;
+      }
+      if (data.featuredOrder !== undefined && data.featuredOrder !== originalDoc.featuredOrder) {
+        data.featuredOrder = originalDoc.featuredOrder;
+      }
+    }
+  }
+
+  if (["articles", "videos"].includes(collection.slug) && req.user) {
+    if (req.user.role !== "admin") {
+      if (!originalDoc?.id) {
+        data.author = req.user.id;
+        data.submittedBy = req.user.id;
+      }
+    } else {
+      if (!data.author && originalDoc?.author) data.author = originalDoc.author;
+      if (!data.author && !originalDoc?.author) data.author = req.user.id;
+    }
+
+    if (!data.authorProfile && originalDoc?.authorProfile) {
+      data.authorProfile = originalDoc.authorProfile;
+    }
+
     if (!data.authorProfile && !originalDoc?.authorProfile) {
       const userAuthorProfile = (req.user as unknown as { authorProfile?: unknown })?.authorProfile;
       if (userAuthorProfile) {

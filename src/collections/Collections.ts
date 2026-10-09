@@ -2,6 +2,7 @@ import { creationHelpField } from "./shared/creation-help";
 import { archiveBeforeDelete } from "./shared/validation";
 import { contentState } from "./shared/publication";
 import { slugify } from "./shared/slug";
+import { isAdmin } from "./shared/auth-roles";
 import type { CollectionConfig, AccessResult } from "payload";
 
 export const Collections: CollectionConfig = {
@@ -34,9 +35,9 @@ export const Collections: CollectionConfig = {
               },
             ],
           },
-    create: ({ req }) => Boolean(req.user),
-    update: ({ req }) => Boolean(req.user),
-    delete: ({ req }) => req.user?.role === "admin",
+    create: ({ req: { user } }) => isAdmin(user),
+    update: ({ req: { user } }) => isAdmin(user),
+    delete: ({ req: { user } }) => isAdmin(user),
   },
   hooks: {
     beforeValidate: [

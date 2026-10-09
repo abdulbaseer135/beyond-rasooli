@@ -3,10 +3,22 @@ import ps from "@/messages/ps.json";
 import fa from "@/messages/fa.json";
 import en from "@/messages/en.json";
 export async function invalid(req: PayloadRequest, path: string, key: keyof typeof en.ui): Promise<never> {
-  const locale = req.i18n.language === "fa" ? "fa" : req.locale === "ps" && req.i18n.language !== "en" ? "ps" : "en";
-  const records = await req.payload.find({ collection: "ui-strings", req, overrideAccess: true, depth: 0, limit: 1, where: { key: { equals: `ui.${key}` } } });
-  const record = records.docs[0];
-  const message = (locale === "fa" ? record?.valueFa : locale === "ps" ? record?.valuePs : record?.valueEn) || ({en,ps,fa}[locale].ui[key]);
+  const lang = req?.i18n?.language;
+  const locale = lang === "fa" ? "fa" : req?.locale === "ps" && lang !== "en" ? "ps" : "en";
+  let message: string | undefined;
+  if (req?.payload?.find) {
+    try {
+      const records = await req.payload.find({ collection: "ui-strings", req, overrideAccess: true, depth: 0, limit: 1, where: { key: { equals: `ui.${key}` } } });
+      const record = records.docs[0];
+      const dbValue = (locale === "fa" ? record?.valueFa : locale === "ps" ? record?.valuePs : record?.valueEn);
+      if (typeof dbValue === "string" && dbValue.trim()) {
+        message = dbValue;
+      }
+    } catch {
+      // Fallback to static messages
+    }
+  }
+  message = message || ({en,ps,fa}[locale]?.ui?.[key]) || (en.ui[key]) || key;
   throw new ValidationError({ errors: [{ path, message }], req });
 }
 export const archiveBeforeDelete: CollectionBeforeDeleteHook = async ({ req, id, collection }) => {

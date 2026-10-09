@@ -1,4 +1,5 @@
 import { creationHelpField } from "./shared/creation-help";
+import { isAdmin, isApprovedEditor } from "./shared/auth-roles";
 import type { CollectionConfig } from "payload";
 
 export const Authors: CollectionConfig = {
@@ -10,9 +11,18 @@ export const Authors: CollectionConfig = {
   },
   access: {
     read: () => true,
-    create: ({ req }) => Boolean(req.user),
-    update: ({ req }) => Boolean(req.user),
-    delete: ({ req }) => req.user?.role === "admin",
+    create: ({ req: { user } }) => isAdmin(user),
+    update: ({ req: { user } }) => {
+      if (!user) return false;
+      if (isAdmin(user)) return true;
+      if (isApprovedEditor(user)) {
+        const u = user as { authorProfile?: unknown };
+        const profileId = typeof u.authorProfile === "object" && u.authorProfile ? (u.authorProfile as { id: unknown }).id : u.authorProfile;
+        return profileId ? { id: { equals: profileId } } : false;
+      }
+      return false;
+    },
+    delete: ({ req: { user } }) => isAdmin(user),
   },
   fields: [
     creationHelpField(),

@@ -18,6 +18,14 @@ export async function POST(req: Request) {
       );
     }
 
+    // Verify editor account is approved
+    if (user.role !== "admin" && (user.role !== "editor" || user.status !== "approved")) {
+      return NextResponse.json(
+        { error: "Forbidden. Only approved editors may submit content for review." },
+        { status: 403 },
+      );
+    }
+
     const body = await req.json();
     const { collection, id } = body || {};
 
@@ -48,6 +56,46 @@ export async function POST(req: Request) {
       );
     }
 
+    // Ownership verification: editors may only submit their own documents
+    if (user.role !== "admin") {
+      const docAny = doc as unknown as Record<string, unknown>;
+      const authorId =
+        typeof docAny.author === "object" && docAny.author
+          ? (docAny.author as { id: unknown }).id
+          : docAny.author;
+      const submitterId =
+        typeof docAny.submittedBy === "object" && docAny.submittedBy
+          ? (docAny.submittedBy as { id: unknown }).id
+          : docAny.submittedBy;
+
+      const isOwner =
+        (authorId !== undefined && String(authorId) === String(user.id)) ||
+        (submitterId !== undefined && String(submitterId) === String(user.id)) ||
+        (!authorId && !submitterId);
+
+      if (!isOwner) {
+        return NextResponse.json(
+          { error: "Forbidden. You can only submit your own content for approval." },
+          { status: 403 },
+        );
+      }
+    }
+
+    // State verification: must be in a valid draft state
+    if (doc.status === "published" || doc.status === "archived") {
+      return NextResponse.json(
+        { error: "Cannot submit published or archived content directly." },
+        { status: 400 },
+      );
+    }
+
+    if (doc.status === "in_review" && doc.reviewDecision !== "changes_requested") {
+      return NextResponse.json(
+        { error: "This content is already awaiting founder approval." },
+        { status: 400 },
+      );
+    }
+
     // Validation before submission
     const missing: string[] = [];
     if (!doc.title || !String(doc.title).trim()) missing.push("Title");
@@ -60,6 +108,7 @@ export async function POST(req: Request) {
     } else if (collection === "videos") {
       const vid = doc as unknown as Record<string, unknown>;
       if (!vid.youtubeUrl || !String(vid.youtubeUrl).trim()) missing.push("YouTube URL");
+      if (!vid.spokenLanguage) missing.push("Spoken Language");
     }
 
     if (missing.length > 0) {
@@ -75,7 +124,7 @@ export async function POST(req: Request) {
     const labelPrefix = isArticle ? "Article" : "Video";
     const isResubmission = doc.reviewDecision === "changes_requested";
 
-    // Update document status to in_review
+    // Update document status to in_review and record authenticated submitter
     const updated = await payload.update({
       collection: collection as AllowedCollection,
       id,
@@ -84,11 +133,12 @@ export async function POST(req: Request) {
       data: {
         status: "in_review",
         submittedBy: user.id,
+        author: (doc as any).author || user.id,
         reviewDecision: "none",
       } as Record<string, unknown>,
     });
 
-    // Generate Founder notification
+    // Generate Founder notification with stable deduplication key
     const editorName = user.name || user.email || "Editor";
     const notifType = isResubmission
       ? isArticle
@@ -106,6 +156,9 @@ export async function POST(req: Request) {
       ? `${editorName} resubmitted "${doc.title || "Untitled"}" for your approval.`
       : `${editorName} submitted "${doc.title || "Untitled"}" for your approval.`;
 
+    const submissionRevision = `rev-${doc.updatedAt || Date.now()}`;
+    const deduplicationKey = `${collection}:${id}:submit:${submissionRevision}`;
+
     await createFounderNotification({
       payload,
       type: notifType,
@@ -114,14 +167,14 @@ export async function POST(req: Request) {
       actorId: user.id,
       targetCollection: collection as AllowedCollection,
       targetId: id,
-      submissionRevision: `rev-${Date.now()}`,
-      deduplicationKey: `${collection}:${id}:submit:${Date.now()}`,
+      submissionRevision,
+      deduplicationKey,
       link: `/admin/content-approvals?type=${isArticle ? "article" : "video"}&id=${id}`,
     });
 
     return NextResponse.json({
       success: true,
-      message: `Your ${labelPrefix.toLowerCase()} has been submitted successfully and is awaiting Founder approval.`,
+      message: "Your content has been submitted and is awaiting founder approval.",
       doc: updated,
     });
   } catch (err: unknown) {

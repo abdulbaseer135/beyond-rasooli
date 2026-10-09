@@ -9,7 +9,7 @@ export const Contacts: CollectionConfig = {
     defaultColumns: ["name", "email", "reason", "createdAt"],
   },
   access: {
-    read: ({ req: { user } }) => Boolean(user),
+    read: ({ req: { user } }) => user?.role === "admin",
     create: ({ req: { user } }) => user?.role === "admin", // Public submissions go through the validated server endpoint
     update: ({ req: { user } }) => user?.role === "admin",
     delete: ({ req: { user } }) => user?.role === "admin",

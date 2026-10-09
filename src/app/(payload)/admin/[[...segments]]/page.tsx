@@ -60,6 +60,11 @@ export default async function AdminPage({ params, searchParams }: Args) {
   const reqHeaders = await headers();
   const { user } = (await payload.auth({ headers: reqHeaders })) as { user: User | null };
 
+  // Deny access to unapproved, pending, rejected, or suspended editors
+  if (user && user.role !== "admin" && user.status !== "approved") {
+    redirect("/admin/login");
+  }
+
   // 1. Root /admin Route: Custom Dashboard (if authenticated)
   if (isRootAdmin && user) {
     if (user.role === "admin") {
@@ -153,22 +158,22 @@ export default async function AdminPage({ params, searchParams }: Args) {
       // Editor dashboard
       const authorId = user.authorProfile ? (typeof user.authorProfile === "object" ? user.authorProfile.id : user.authorProfile) : null;
       const userCondition: any = authorId
-        ? { or: [{ author: { equals: authorId } }, { submittedBy: { equals: user.id } }] }
-        : { submittedBy: { equals: user.id } };
+        ? { or: [{ author: { equals: authorId } }, { author: { equals: user.id } }, { submittedBy: { equals: user.id } }] }
+        : { or: [{ author: { equals: user.id } }, { submittedBy: { equals: user.id } }] };
 
       const [myArticles, myVideos] = await Promise.all([
         payload.find({
           collection: "articles",
           where: userCondition,
           overrideAccess: true,
-          limit: 50,
+          limit: 100,
           sort: "-updatedAt",
         }).catch(() => ({ docs: [] })),
         payload.find({
           collection: "videos",
           where: userCondition,
           overrideAccess: true,
-          limit: 50,
+          limit: 100,
           sort: "-updatedAt",
         }).catch(() => ({ docs: [] })),
       ]);
@@ -182,6 +187,8 @@ export default async function AdminPage({ params, searchParams }: Args) {
           reviewDecision: a.reviewDecision,
           reviewNotes: a.reviewNotes,
           updatedAt: a.updatedAt,
+          slug: a.slug,
+          language: a.language,
         })),
         ...myVideos.docs.map((v: any) => ({
           id: v.id,
@@ -191,13 +198,25 @@ export default async function AdminPage({ params, searchParams }: Args) {
           reviewDecision: v.reviewDecision,
           reviewNotes: v.reviewNotes,
           updatedAt: v.updatedAt,
+          slug: v.slug,
+          language: v.language,
         })),
       ].sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""));
 
       const stats = {
-        myDrafts: allItems.filter((i) => i.status === "draft").length,
+        myDrafts: allItems.filter(
+          (i) =>
+            i.status === "draft" &&
+            i.reviewDecision !== "changes_requested" &&
+            i.reviewDecision !== "rejected",
+        ).length,
         awaitingApproval: allItems.filter((i) => i.status === "in_review").length,
-        changesRequested: allItems.filter((i) => i.reviewDecision === "changes_requested").length,
+        changesRequested: allItems.filter(
+          (i) => i.reviewDecision === "changes_requested",
+        ).length,
+        rejectedSubmissions: allItems.filter(
+          (i) => i.reviewDecision === "rejected",
+        ).length,
         publishedContributions: allItems.filter((i) => i.status === "published").length,
       };
 
@@ -205,7 +224,7 @@ export default async function AdminPage({ params, searchParams }: Args) {
         <EditorDashboard
           user={user}
           stats={stats}
-          mySubmissions={allItems.slice(0, 10)}
+          mySubmissions={allItems}
         />
       );
     }

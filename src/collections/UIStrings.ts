@@ -1,5 +1,6 @@
 import { creationHelpField } from "./shared/creation-help";
 import { invalid } from "./shared/validation";
+import { canAccessEditorial } from "./shared/auth-roles";
 import type { CollectionConfig } from "payload";
 
 export const UIStrings: CollectionConfig = {
@@ -15,7 +16,7 @@ export const UIStrings: CollectionConfig = {
   },
   access: {
     read: () => true,
-    update: ({ req: { user } }) => Boolean(user),
+    update: ({ req: { user } }) => canAccessEditorial(user),
     create: ({ req: { user } }) => user?.role === "admin",
     delete: ({ req: { user } }) => user?.role === "admin",
   },

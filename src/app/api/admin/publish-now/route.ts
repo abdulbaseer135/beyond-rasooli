@@ -85,9 +85,13 @@ export async function POST(req: Request) {
       },
       data: {
         status: "published",
-        publishedAt: nowIso,
+        publishedAt: (doc as any).publishedAt || nowIso,
         reviewDecision: "approved",
         reviewNotes: "",
+        reviewedBy: user.id,
+        reviewedAt: nowIso,
+        author: (doc as any).author || (doc as any).submittedBy || user.id,
+        submittedBy: (doc as any).submittedBy || user.id,
       } as Record<string, unknown>,
     });
 
