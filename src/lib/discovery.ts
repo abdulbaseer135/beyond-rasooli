@@ -12,6 +12,7 @@ export function filterItems<
   T extends {
     topicSlug: string;
     language: string;
+    displayLanguage?: string;
     spokenLanguage?: string;
     format?: string | null | undefined;
     title: string;
@@ -28,7 +29,7 @@ export function filterItems<
         (value(params, "topic") === "all" ||
           d.topicSlug === value(params, "topic")) &&
         (value(params, "language") === "all" ||
-          (kind === "watch" ? d.spokenLanguage : d.language) ===
+          (kind === "watch" ? d.spokenLanguage : d.displayLanguage || d.language) ===
             value(params, "language")) &&
         (kind === "watch" ||
           value(params, "format") === "all" ||

@@ -85,6 +85,7 @@ export async function POST(req: Request) {
 
         await payload.update({
           collection: "users",
+          user,
           id: userId,
           overrideAccess: true,
           data: {
@@ -124,6 +125,7 @@ export async function POST(req: Request) {
 
         await payload.update({
           collection: "users",
+          user,
           id: userId,
           overrideAccess: true,
           data: {
@@ -159,6 +161,7 @@ export async function POST(req: Request) {
 
         await payload.update({
           collection: "users",
+          user,
           id: userId,
           overrideAccess: true,
           data: {
@@ -190,6 +193,7 @@ export async function POST(req: Request) {
 
         await payload.update({
           collection: "users",
+          user,
           id: userId,
           overrideAccess: true,
           data: {
@@ -220,6 +224,7 @@ export async function POST(req: Request) {
           // Soft-delete/suspend to preserve foreign keys and public author byline integrity
           await payload.update({
             collection: "users",
+            user,
             id: userId,
             overrideAccess: true,
             data: {

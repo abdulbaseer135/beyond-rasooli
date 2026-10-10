@@ -1,3 +1,4 @@
+import { editorialContentCreateAccess, editorialContentUpdateAccess } from "./shared/auth-roles";
 import { publishControlsField } from "./shared/publish-controls";
 import { creationHelpField } from "./shared/creation-help";
 import { randomUUID } from "node:crypto";
@@ -28,23 +29,8 @@ export const Articles: CollectionConfig = {
   },
   access: {
     read: publicContentRead,
-    update: ({ req: { user }, data }) => {
-      if (!user) return false;
-      if (user.role === "admin") return true;
-      if (user.role !== "editor" || (user.status && user.status !== "approved")) return false;
-      if (
-        data?.status === "published" ||
-        data?.status === "archived" ||
-        data?.status === "scheduled"
-      )
-        return false;
-      return true;
-    },
-    create: ({ req: { user } }) =>
-      Boolean(
-        user?.role === "admin" ||
-          (user?.role === "editor" && (user?.status === "approved" || !user?.status)),
-      ),
+    update: editorialContentUpdateAccess,
+    create: editorialContentCreateAccess,
     delete: ({ req: { user } }) => user?.role === "admin",
   },
   hooks: {

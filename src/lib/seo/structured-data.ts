@@ -2,7 +2,7 @@ import type { PublicArticle, PublicVideo } from '../data/content-types';
 const baseUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000';
 export function getArticleSchema(a: PublicArticle, locale: string) {
  return { '@context': 'https://schema.org', '@type': 'Article', headline: a.title, description: a.summary,
-  url: `${baseUrl}/${locale}/read/${a.slug}`, inLanguage: locale === 'fa' ? 'fa-AF' : locale,
+  url: `${baseUrl}/${locale}/read/${a.slug}`, inLanguage: (a.sourceLanguage || locale) === 'fa' ? 'fa-AF' : a.sourceLanguage || locale,
   image: a.coverImageUrl, author: { '@type': 'Person', name: a.authorName },
   datePublished: a.publishedAt, dateModified: a.updatedAt,
   citation: a.sources.map(s => ({ '@type': 'CreativeWork', name: s.title, author: s.authorOrg, datePublished: s.year, url: s.urlDoi })) };

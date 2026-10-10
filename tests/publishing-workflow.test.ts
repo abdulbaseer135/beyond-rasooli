@@ -103,7 +103,7 @@ test("Articles and Videos collections include publishControls and creationHelp",
 });
 
 test("Editor access control strictly blocks setting status to published or archived", () => {
-  const editorUser = { id: "99", role: "editor", email: "editor@example.com" };
+  const editorUser = { id: "99", role: "editor", status: "approved", email: "editor@example.com" };
   const adminUser = { id: "1", role: "admin", email: "founder@example.com" };
 
   const updateAccess = Articles.access?.update;
@@ -129,15 +129,11 @@ test("Editor access control strictly blocks setting status to published or archi
     false,
   );
 
-  // Editor CAN update draft or in_review
-  assert.equal(
-    updateAccess({ req: { user: editorUser }, data: { status: "in_review" }, id: "1" } as unknown as UpdateArg),
-    true,
-  );
-  assert.equal(
-    updateAccess({ req: { user: editorUser }, data: { status: "draft" }, id: "1" } as unknown as UpdateArg),
-    true,
-  );
+  // Editors can save or submit only their own persisted drafts.
+  for (const status of ["draft", "in_review"]) {
+    const rule = updateAccess({ req: { user: editorUser }, data: { status }, id: "1" } as unknown as UpdateArg);
+    assert.deepEqual(rule, { and: [{ or: [{ author: { equals: "99" } }, { submittedBy: { equals: "99" } }] }, { status: { equals: "draft" } }] });
+  }
 });
 
 test("archiveBeforeDelete allows Founder (admin) to delete published content directly", async () => {

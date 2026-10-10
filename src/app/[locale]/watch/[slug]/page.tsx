@@ -55,7 +55,7 @@ export default async function VideoDetail({
   const isVertical = Boolean(v.isVertical);
 
   return (
-    <div className="site-container page-start space-y-12 pb-16">
+    <div className="site-container page-start space-y-12 pb-16" lang={v.language === "fa" ? "fa-AF" : v.language} dir={v.language === "en" ? "ltr" : "rtl"}>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -105,6 +105,7 @@ export default async function VideoDetail({
               )}
             </div>
 
+            {v.translationUnavailable && <p className="type-meta italic">{t("translation_unavailable")}</p>}
             {v.translationStatus === "machine_draft" && (
               <p className="type-meta italic">{t("translation_notice")}</p>
             )}
@@ -187,6 +188,7 @@ export default async function VideoDetail({
               )}
             </div>
 
+            {v.translationUnavailable && <p className="type-meta italic">{t("translation_unavailable")}</p>}
             {v.translationStatus === "machine_draft" && (
               <p className="type-meta italic">{t("translation_notice")}</p>
             )}

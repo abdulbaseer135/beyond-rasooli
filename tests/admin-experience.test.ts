@@ -122,7 +122,8 @@ test("Topic collection has status field, auto-slug, and hides order from non-adm
   assert(fieldNames.includes("order"));
 
   const statusField = Topics.fields.find((f: any) => f.name === "status") as any;
-  assert.equal(statusField.defaultValue, "published");
+  assert.equal(statusField.defaultValue({ user: { role: "admin" } }), "published");
+  assert.equal(statusField.defaultValue({ user: { role: "editor" } }), "draft");
   const orderField = Topics.fields.find((f: any) => f.name === "order") as any;
   assert(typeof orderField.admin?.condition === "function");
   assert.equal(orderField.admin.condition({}, {}, { user: { role: "editor" } }), false);

@@ -117,7 +117,7 @@ export function EditorRequestsView({
                       </p>
                       {req.appliedAt && (
                         <p className="text-xs text-zinc-400">
-                          Applied on: {new Date(req.appliedAt).toLocaleDateString()}
+                          Applied on: {new Date(req.appliedAt).toLocaleDateString("en-GB", { timeZone: "UTC" })}
                         </p>
                       )}
                     </div>

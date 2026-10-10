@@ -1,8 +1,8 @@
+import { withContentLock } from "@/lib/content-lock";
 import { NextResponse } from "next/server";
-import { getPayload } from "payload";
+import { APIError, getPayload } from "payload";
 import configPromise from "@payload-config";
 import { headers } from "next/headers";
-import { createFounderNotification } from "@/lib/notifications";
 
 type AllowedCollection = "articles" | "videos";
 
@@ -36,13 +36,26 @@ export async function POST(req: Request) {
       );
     }
 
-    if (!["articles", "videos"].includes(collection)) {
+    if (!["articles", "videos", "topics"].includes(collection)) {
       return NextResponse.json(
         { error: `Invalid collection: ${collection}` },
         { status: 400 },
       );
     }
 
+    return await withContentLock(payload, `${collection}:${id}`, async () => {
+    if (collection === "topics") {
+      const topic = await payload.findByID({ collection: "topics", id, locale: "all", user, overrideAccess: false });
+      const owner = typeof topic.submittedBy === "object" ? topic.submittedBy?.id : topic.submittedBy;
+      if (user.role !== "admin" && String(owner) !== String(user.id)) return NextResponse.json({ error: "Forbidden." }, { status: 403 });
+      if (topic.status === "pending") return NextResponse.json({ success: true, doc: topic });
+      if (topic.status !== "draft") return NextResponse.json({ error: "Only topic drafts may be submitted." }, { status: 400 });
+      const names = topic.name as unknown as Record<string, string>;
+      const locale = (["en", "ps", "fa"] as const).find(value => names[value]?.trim());
+      if (!locale) return NextResponse.json({ error: "Topic name is required." }, { status: 400 });
+      const updated = await payload.update({ collection: "topics", id, locale, user, overrideAccess: false, data: { status: "pending" } });
+      return NextResponse.json({ success: true, doc: updated });
+    }
     const doc = await payload.findByID({
       collection: collection as AllowedCollection,
       id,
@@ -71,7 +84,7 @@ export async function POST(req: Request) {
       const isOwner =
         (authorId !== undefined && String(authorId) === String(user.id)) ||
         (submitterId !== undefined && String(submitterId) === String(user.id)) ||
-        (!authorId && !submitterId);
+        false;
 
       if (!isOwner) {
         return NextResponse.json(
@@ -91,8 +104,7 @@ export async function POST(req: Request) {
 
     if (doc.status === "in_review" && doc.reviewDecision !== "changes_requested") {
       return NextResponse.json(
-        { error: "This content is already awaiting founder approval." },
-        { status: 400 },
+        { success: true, message: "This content is already awaiting founder approval.", doc },
       );
     }
 
@@ -120,10 +132,6 @@ export async function POST(req: Request) {
       );
     }
 
-    const isArticle = collection === "articles";
-    const labelPrefix = isArticle ? "Article" : "Video";
-    const isResubmission = doc.reviewDecision === "changes_requested";
-
     // Update document status to in_review and record authenticated submitter
     const updated = await payload.update({
       collection: collection as AllowedCollection,
@@ -138,48 +146,15 @@ export async function POST(req: Request) {
       } as Record<string, unknown>,
     });
 
-    // Generate Founder notification with stable deduplication key
-    const editorName = user.name || user.email || "Editor";
-    const notifType = isResubmission
-      ? isArticle
-        ? "article_resubmission"
-        : "video_resubmission"
-      : isArticle
-        ? "article_approval"
-        : "video_approval";
-
-    const notifTitle = isResubmission
-      ? `${labelPrefix} Resubmission`
-      : `New ${labelPrefix} Awaiting Approval`;
-
-    const notifMessage = isResubmission
-      ? `${editorName} resubmitted "${doc.title || "Untitled"}" for your approval.`
-      : `${editorName} submitted "${doc.title || "Untitled"}" for your approval.`;
-
-    const submissionRevision = `rev-${doc.updatedAt || Date.now()}`;
-    const deduplicationKey = `${collection}:${id}:submit:${submissionRevision}`;
-
-    await createFounderNotification({
-      payload,
-      type: notifType,
-      title: notifTitle,
-      message: notifMessage,
-      actorId: user.id,
-      targetCollection: collection as AllowedCollection,
-      targetId: id,
-      submissionRevision,
-      deduplicationKey,
-      link: `/admin/content-approvals?type=${isArticle ? "article" : "video"}&id=${id}`,
-    });
-
     return NextResponse.json({
       success: true,
       message: "Your content has been submitted and is awaiting founder approval.",
       doc: updated,
     });
+    });
   } catch (err: unknown) {
     console.error("Submit for approval error:", err);
     const msg = err instanceof Error ? err.message : "Internal server error";
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json({ error: msg }, { status: err instanceof APIError ? err.status : 500 });
   }
 }

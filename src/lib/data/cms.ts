@@ -1,3 +1,4 @@
+import { resolveLanguages } from "./language-resolution";
 import { extractYouTubeId, isVerticalVideo } from "@/lib/youtube";
 import "server-only";
 import { eligible } from "./publication";
@@ -104,8 +105,8 @@ async function fetchAll<T>(
     const t0 = performance.now();
     const result = await payload.find({
       collection,
-      locale,
-      fallbackLocale: false,
+      locale: collection === "topics" ? "all" : locale,
+      fallbackLocale: "en",
       overrideAccess: false,
       depth,
       limit: 100,
@@ -113,7 +114,12 @@ async function fetchAll<T>(
       where,
     });
     recordPayloadCall("find", collection, performance.now() - t0, `page ${page}`);
-    docs.push(...(result.docs as unknown as T[]));
+    const records = collection === "topics" ? result.docs.map(doc => {
+      const topic = doc as unknown as Record<string, unknown>;
+      const localized = (value: unknown) => value && typeof value === "object" ? (value as Record<string, string>)[locale] || Object.values(value).find(v => typeof v === "string" && v.trim()) || "" : value;
+      return { ...topic, name: localized(topic.name), description: localized(topic.description) };
+    }) : result.docs;
+    docs.push(...(records as unknown as T[]));
     if (!result.hasNextPage) return docs;
     page++;
   }
@@ -132,7 +138,6 @@ const getCachedLibrary = unstable_cache(
           "articles",
           locale,
           {
-            language: { equals: locale },
             status: { equals: "published" },
           },
           1,
@@ -141,7 +146,6 @@ const getCachedLibrary = unstable_cache(
           "videos",
           locale,
           {
-            language: { equals: locale },
             status: { equals: "published" },
           },
           1,
@@ -150,12 +154,8 @@ const getCachedLibrary = unstable_cache(
         fetchAll<Collection>("collections", locale, undefined, 1),
       ]);
 
-    const aDocs = articleDocs.filter((d) =>
-      eligible(d, Boolean(settings.requireReviewBeforePublic)),
-    );
-    const vDocs = videoDocs.filter((d) =>
-      eligible(d, Boolean(settings.requireReviewBeforePublic)),
-    );
+    const aDocs = resolveLanguages(articleDocs, locale, Boolean(settings.requireReviewBeforePublic));
+    const vDocs = resolveLanguages(videoDocs, locale, Boolean(settings.requireReviewBeforePublic));
 
     const byNewest = (
       a: { publishedAt?: string | null },
@@ -213,7 +213,7 @@ const getCachedLibrary = unstable_cache(
     }
 
     const articles: PublicArticle[] = aDocs.map((d) => {
-      const topic = object<Topic>(d.topic);
+      const topic = topicDocs.find(topic => String(topic.id) === relationID(d.topic)) || object<Topic>(d.topic);
       const cover = media(d.coverImage);
       const profile = object<{
         name: string;
@@ -267,7 +267,7 @@ const getCachedLibrary = unstable_cache(
     });
 
     const videos: PublicVideo[] = vDocs.map((d) => {
-      const topic = object<Topic>(d.topic);
+      const topic = topicDocs.find(topic => String(topic.id) === relationID(d.topic)) || object<Topic>(d.topic);
       const poster = media(d.thumbnail);
       return {
         ...d,
@@ -303,10 +303,8 @@ const getCachedLibrary = unstable_cache(
     const topics: PublicTopic[] = topicDocs
       .filter(
         (d) =>
-          d.name &&
-          (!("status" in d) || (d as { status?: string }).status === "published") &&
-          (articles.some((a) => a.topicSlug === d.slug) ||
-            videos.some((v) => v.topicSlug === d.slug)),
+          d.name && d.slug &&
+          (!("status" in d) || (d as { status?: string }).status === "published"),
       )
       .sort((a, b) => (a.order || 0) - (b.order || 0))
       .map((d) => ({
@@ -362,7 +360,7 @@ const getCachedLibrary = unstable_cache(
 
     return { articles, videos, topics, collections, settings };
   },
-  ["cms-library-data"],
+  ["cms-library-data-v3"],
   {
     tags: [
       "cms:articles",
@@ -435,7 +433,11 @@ export const getArticleBySlug = cache(
   async (slug: string, locale: Locale): Promise<PublicArticle | undefined> => {
     // 1. Try finding in cached library for instant 0ms hit
     const library = await getLibrary(locale);
-    const inLib = library.articles.find((d) => d.slug === slug);
+    let inLib = library.articles.find((d) => d.slug === slug);
+    if (!inLib) {
+      const source = await (await getCMS()).find({ collection: "articles", overrideAccess: false, depth: 0, limit: 1, where: { slug: { equals: slug }, status: { equals: "published" } } });
+      inLib = library.articles.find(d => d.translationGroup === source.docs[0]?.translationGroup);
+    }
     if (inLib) return inLib;
 
     // 2. Direct slug query in case of fresh content
@@ -544,7 +546,11 @@ export const getVideoBySlug = cache(
   async (slug: string, locale: Locale): Promise<PublicVideo | undefined> => {
     // 1. Try finding in cached library for instant hit
     const library = await getLibrary(locale);
-    const inLib = library.videos.find((d) => d.slug === slug);
+    let inLib = library.videos.find((d) => d.slug === slug);
+    if (!inLib) {
+      const source = await (await getCMS()).find({ collection: "videos", overrideAccess: false, depth: 0, limit: 1, where: { slug: { equals: slug }, status: { equals: "published" } } });
+      inLib = library.videos.find(d => d.translationGroup === source.docs[0]?.translationGroup);
+    }
     if (inLib) return inLib;
 
     // 2. Direct slug query

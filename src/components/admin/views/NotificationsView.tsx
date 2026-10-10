@@ -333,7 +333,7 @@ export function NotificationsView({
                           )}
                           <span>
                             Event timestamp:{" "}
-                            {new Date(notif.createdAt).toLocaleString()}
+                            {new Date(notif.createdAt).toLocaleString("en-GB", { timeZone: "UTC" })}
                           </span>
                         </div>
                       </div>

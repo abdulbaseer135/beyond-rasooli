@@ -1,6 +1,9 @@
 import type { Article, Video, Media } from "@/payload-types";
 import type { Locale } from "@/i18n/routing";
 export interface PublicArticle extends Omit<Article, "id" | "tags" | "slug" | "summary"> {
+  displayLanguage?: Locale;
+  translationUnavailable?: boolean;
+  sourceLanguage?: Locale;
   id: string;
   slug: string;
   summary: string;
@@ -21,6 +24,9 @@ export interface PublicArticle extends Omit<Article, "id" | "tags" | "slug" | "s
   sources: NonNullable<Article["sources"]>;
 }
 export interface PublicVideo extends Omit<Video, "id" | "tags" | "slug" | "description"> {
+  displayLanguage?: Locale;
+  translationUnavailable?: boolean;
+  sourceLanguage?: Locale;
   id: string;
   slug: string;
   description: string;
@@ -39,6 +45,8 @@ export interface PublicVideo extends Omit<Video, "id" | "tags" | "slug" | "descr
   isVertical: boolean;
 }
 export interface PublicTopic {
+  translationUnavailable?: boolean;
+  sourceLanguage?: Locale;
   id: string;
   slug: string;
   name: Record<Locale, string>;
@@ -47,6 +55,8 @@ export interface PublicTopic {
   coverImageUrl?: string;
 }
 export interface PublicCollection {
+  translationUnavailable?: boolean;
+  sourceLanguage?: Locale;
   id: string;
   slug: string;
   title: Record<Locale, string>;

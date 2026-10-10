@@ -33,6 +33,7 @@ export const Notifications: CollectionConfig = {
         { label: "Editor Registration", value: "editor_registration" },
         { label: "Article Awaiting Approval", value: "article_approval" },
         { label: "Video Awaiting Approval", value: "video_approval" },
+        { label: "Topic Awaiting Approval", value: "topic_approval" },
         { label: "Article Resubmission", value: "article_resubmission" },
         { label: "Video Resubmission", value: "video_resubmission" },
       ],
@@ -62,6 +63,7 @@ export const Notifications: CollectionConfig = {
         { label: "Users (Editor Applications)", value: "users" },
         { label: "Articles", value: "articles" },
         { label: "Videos", value: "videos" },
+        { label: "Topics", value: "topics" },
       ],
     },
     {

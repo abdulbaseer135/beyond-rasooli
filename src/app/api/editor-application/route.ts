@@ -160,36 +160,24 @@ export async function POST(req: Request) {
       );
     }
 
-    // 5. Create new pending editor account
-    const createdUser = await payload.create({
-      collection: "users",
-      overrideAccess: true,
-      context: { publicEditorRegistration: true },
-      data: {
-        name: trimmedName,
-        email: trimmedEmail,
-        password,
-        role: "editor",
-        status: "pending",
-        bio: typeof bio === "string" ? bio.trim() : "",
-        reasonForJoining:
-          typeof reasonForJoining === "string" ? reasonForJoining.trim() : "",
-        appliedAt: new Date().toISOString(),
-      },
+    const createData = {
+      name: trimmedName,
+      email: trimmedEmail,
+      password,
+      role: "editor" as const,
+      status: "pending" as const,
+      bio: typeof bio === "string" ? bio.trim() : "",
+      reasonForJoining:
+        typeof reasonForJoining === "string" ? reasonForJoining.trim() : "",
+      appliedAt: new Date().toISOString(),
+    };
+    await payload.create({
+        collection: "users",
+        overrideAccess: true,
+        context: { publicEditorRegistration: true },
+        data: createData,
     });
 
-    const { createFounderNotification } = await import("@/lib/notifications");
-    await createFounderNotification({
-      payload,
-      type: "editor_registration",
-      title: "New Editor Registration",
-      message: `${trimmedName} has requested to join Beyond Rasooli as an editor.`,
-      actorId: createdUser.id,
-      targetCollection: "users",
-      targetId: createdUser.id,
-      deduplicationKey: `editor_registration:${createdUser.id}`,
-      link: "/admin/editor-requests",
-    });
 
     return NextResponse.json(
       {

@@ -384,6 +384,34 @@
     "create_help_glossary": "Enter a unique English term, then Save. Add Pashto/Dari equivalents or mark the term as do not translate.",
     "create_help_ui_strings": "Use a stable namespace.key identifier, choose its namespace, and enter the English value. Keep any placeholders unchanged in translations. Only Admin can approve wording.",
     "create_help_users": "Enter a name, valid email and a password with at least 12 characters including letters and numbers. The first account becomes Admin; later accounts default to Editor.",
-    "media_image_required": "This library accepts image files, not YouTube pages. Choose New Video to save a YouTube link."
+    "media_image_required": "This library accepts image files, not YouTube pages. Choose New Video to save a YouTube link.",
+    "translation_unavailable": "Translation is temporarily unavailable. The original published content is shown."
+  },
+  "admin_content": {
+    "content_list": "Content",
+    "all": "All",
+    "articles": "Articles",
+    "videos": "Videos",
+    "topics": "Topics",
+    "draft": "Draft",
+    "in_review": "Pending Review",
+    "published": "Published",
+    "scheduled": "Scheduled",
+    "archived": "Archived",
+    "rejected": "Rejected",
+    "changes_requested": "Changes Requested",
+    "approved": "Approved",
+    "created": "Created",
+    "updated": "Updated",
+    "view_live": "View Live",
+    "type_filter": "Content type",
+    "state_filter": "Content status",
+    "empty": "No matching content.",
+    "previous": "Previous",
+    "next": "Next",
+    "page": "Page",
+    "pagination": "Pagination",
+    "save_error": "Please correct the highlighted fields and try again.",
+    "publish_success": "Published successfully!"
   }
 }

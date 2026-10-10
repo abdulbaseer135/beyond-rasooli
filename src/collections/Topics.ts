@@ -1,15 +1,16 @@
+import { topicState, topicChanged } from "./shared/topic-workflow";
+import { publishControlsField } from "./shared/publish-controls";
 import { creationHelpField } from "./shared/creation-help";
-import { slugify } from "./shared/slug";
 import { canAccessEditorial } from "./shared/auth-roles";
-import type { CollectionConfig } from "payload";
+import type { AccessResult, CollectionConfig } from "payload";
 
 export const Topics: CollectionConfig = {
   slug: "topics",
   access: {
-    read: ({ req }) =>
-      req.user ? true : { status: { equals: "published" } },
+    read: ({ req }): AccessResult =>
+      req.user?.role === "admin" ? true : canAccessEditorial(req.user) ? { or: [{ status: { equals: "published" } }, { submittedBy: { equals: req.user?.id } }] } : { status: { equals: "published" } },
     create: ({ req: { user } }) => canAccessEditorial(user),
-    update: ({ req: { user } }) => canAccessEditorial(user),
+    update: ({ req: { user }, data }): AccessResult => user?.role === "admin" ? true : canAccessEditorial(user) && !["published", "scheduled", "archived"].includes(data?.status) ? { and: [{ submittedBy: { equals: user?.id } }, { status: { equals: "draft" } }] } : false,
     delete: ({ req }) => req.user?.role === "admin",
   },
   admin: {
@@ -17,26 +18,8 @@ export const Topics: CollectionConfig = {
     defaultColumns: ["name", "slug", "status"],
   },
   hooks: {
-    beforeValidate: [
-      ({ data, req }) => {
-        if (data && (!data.slug || !String(data.slug).trim()) && data.name) {
-          data.slug = slugify(String(data.name));
-        }
-        // Editors proposing a new topic cannot publish it directly
-        if (req.user?.role !== "admin" && data) {
-          data.status = "pending";
-        }
-        return data;
-      },
-    ],
-    afterChange: [
-      () => {
-        import("@/lib/data/cache-revalidate").then(({ invalidateCache }) => {
-          invalidateCache("cms:topics");
-          invalidateCache("cms:library");
-        });
-      },
-    ],
+    beforeValidate: [topicState],
+    afterChange: [topicChanged],
     afterDelete: [
       ({ req, id }) => {
         import("@/lib/data/cache-revalidate").then(({ invalidateCache }) => {
@@ -55,6 +38,12 @@ export const Topics: CollectionConfig = {
   },
   fields: [
     creationHelpField(),
+    publishControlsField(),
+    { name: "submittedBy", type: "relationship", relationTo: "users", index: true, admin: { readOnly: true } },
+    { name: "reviewDecision", type: "select", defaultValue: "none", options: ["none", "approved", "changes_requested", "rejected"], admin: { readOnly: true } },
+    { name: "reviewNotes", type: "textarea", admin: { readOnly: true } },
+    { name: "reviewedBy", type: "relationship", relationTo: "users", admin: { readOnly: true } },
+    { name: "reviewedAt", type: "date", admin: { readOnly: true } },
     {
       name: "name",
       type: "text",
@@ -77,7 +66,7 @@ export const Topics: CollectionConfig = {
       name: "status",
       type: "select",
       required: true,
-      defaultValue: "published",
+      defaultValue: ({ user }) => user?.role === "admin" ? "published" : "draft",
       admin: {
         position: "sidebar",
         description: "Topic publication status (editor proposals require founder approval)",
@@ -87,9 +76,7 @@ export const Topics: CollectionConfig = {
         { label: "Pending Founder Approval", value: "pending" },
         { label: "Draft", value: "draft" },
       ],
-      access: {
-        update: ({ req: { user } }) => user?.role === "admin",
-      },
+
     },
     {
       name: "description",

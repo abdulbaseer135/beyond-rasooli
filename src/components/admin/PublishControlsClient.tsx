@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { useDocumentInfo, useForm, useFormFields } from "@payloadcms/ui";
+import React, { useState, useRef } from "react";
+import { useDocumentInfo, useForm, useFormFields, useFormModified } from "@payloadcms/ui";
 import {
   CheckCircle2,
   Clock,
@@ -21,21 +21,30 @@ interface PublishControlsClientProps {
   userName?: string;
   collectionSlug: string;
   adminLocale: string;
+  messages: Record<string, string>;
 }
 
 export function PublishControlsClient({
   userRole,
-  userId,
   collectionSlug,
+  messages,
 }: PublishControlsClientProps) {
   const isFounder = userRole === "admin";
   const { id } = useDocumentInfo();
-  const { dispatchFields, submit } = useForm();
+  const { dispatchFields, submit, setModified } = useForm();
+  const modified = useFormModified();
+  const busy = useRef(false);
+  const save = async (overrides: Record<string, unknown>) => {
+    const result = await submit({ overrides });
+    if (!result?.res?.ok) throw new Error(messages.save_error);
+    for (const [path, value] of Object.entries(overrides)) dispatchFields({ type: "UPDATE", path, value });
+    setModified(false);
+  };
 
   // Read current form field values
   const currentStatus =
     (useFormFields(([f]) => f.status?.value as string | undefined)) || "draft";
-  const title = useFormFields(([f]) => f.title?.value as string | undefined);
+  const title = useFormFields(([f]) => (f.title?.value || f.name?.value) as string | undefined);
   const slug = useFormFields(([f]) => f.slug?.value as string | undefined);
   const language =
     (useFormFields(([f]) => f.language?.value as string | undefined)) || "en";
@@ -58,9 +67,10 @@ export function PublishControlsClient({
     liveUrl?: string;
   } | null>(null);
 
+  const isTopic = collectionSlug === "topics";
   const isArticle = collectionSlug === "articles";
-  const itemTypeLabel = isArticle ? "Article" : "Video";
-  const publicSection = isArticle ? "read" : "watch";
+  const itemTypeLabel = isTopic ? messages.topics : isArticle ? "Article" : "Video";
+  const publicSection = isTopic ? "topics" : isArticle ? "read" : "watch";
 
   // Construct live URL if published
   const liveSlug = slug || (id ? String(id) : "");
@@ -71,11 +81,11 @@ export function PublishControlsClient({
     const errors: string[] = [];
     if (!title || !title.trim()) errors.push("Title is required");
     if (!language) errors.push("Language is required");
-    if (!topic) errors.push("Topic is required");
+    if (!isTopic && !topic) errors.push("Topic is required");
 
     if (isArticle) {
       if (!body) errors.push("Article Body is required");
-    } else {
+    } else if (!isTopic) {
       if (!youtubeUrl || !youtubeUrl.trim()) errors.push("YouTube URL is required");
       if (!spokenLanguage) errors.push("Spoken Language is required");
     }
@@ -87,10 +97,7 @@ export function PublishControlsClient({
     setIsProcessing(true);
     setFeedback(null);
     try {
-      if (currentStatus !== "published") {
-        dispatchFields({ type: "UPDATE", path: "status", value: "draft" });
-      }
-      await submit();
+      await save({ status: currentStatus === "published" ? "published" : "draft" });
       setFeedback({ type: "success", text: "Draft saved successfully." });
     } catch {
       setFeedback({ type: "error", text: "Failed to save draft. Check required fields." });
@@ -124,49 +131,15 @@ export function PublishControlsClient({
       return;
     }
 
+    if (busy.current || (currentStatus === "published" && !modified)) return;
+    busy.current = true;
     setIsProcessing(true);
-    const nowIso = new Date().toISOString();
-
     try {
-      // Step A: Update form state
-      dispatchFields({ type: "UPDATE", path: "status", value: "published" });
-      dispatchFields({ type: "UPDATE", path: "publishedAt", value: nowIso });
-      dispatchFields({ type: "UPDATE", path: "reviewDecision", value: "approved" });
-      dispatchFields({ type: "UPDATE", path: "reviewNotes", value: "" });
-
-      // Step B: Submit current form
-      await submit();
-
-      // Step C: If document has ID, trigger server-side publish-now verification & cache purge
-      if (id) {
-        const res = await fetch("/api/admin/publish-now", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ collection: collectionSlug, id }),
-        });
-        const data = await res.json();
-        if (data.success && data.liveUrl) {
-          setFeedback({
-            type: "success",
-            text: `Published successfully! Your ${itemTypeLabel.toLowerCase()} is now live.`,
-            liveUrl: data.liveUrl,
-          });
-          setIsProcessing(false);
-          return;
-        }
-      }
-
-      setFeedback({
-        type: "success",
-        text: `Published successfully! Your ${itemTypeLabel.toLowerCase()} is now live.`,
-        liveUrl,
-      });
+      await save({ status: "published", publishedAt: currentStatus === "scheduled" ? new Date().toISOString() : publishedAt || new Date().toISOString(), reviewDecision: "approved", reviewNotes: "" });
+      setFeedback({ type: "success", text: messages.publish_success, liveUrl });
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to publish.";
-      setFeedback({ type: "error", text: `Publication error: ${msg}` });
-    } finally {
-      setIsProcessing(false);
-    }
+      setFeedback({ type: "error", text: err instanceof Error ? err.message : "Failed to publish." });
+    } finally { busy.current = false; setIsProcessing(false); }
   };
 
   // 4. EDITOR: SUBMIT FOR APPROVAL
@@ -186,36 +159,15 @@ export function PublishControlsClient({
     );
     if (!confirmed) return;
 
+    if (busy.current || ["pending", "in_review", "published", "scheduled", "archived"].includes(currentStatus)) return;
+    busy.current = true;
     setIsProcessing(true);
     try {
-      dispatchFields({ type: "UPDATE", path: "status", value: "in_review" });
-      if (userId) {
-        dispatchFields({ type: "UPDATE", path: "submittedBy", value: userId });
-      }
-      dispatchFields({ type: "UPDATE", path: "reviewDecision", value: "none" });
-
-      await submit();
-
-      if (id) {
-        await fetch("/api/admin/submit-for-approval", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ collection: collectionSlug, id }),
-        });
-      }
-
-      setFeedback({
-        type: "success",
-        text: "Your content has been submitted and is awaiting founder approval.",
-      });
-    } catch {
-      setFeedback({
-        type: "error",
-        text: "Submission failed. Please verify required fields and try again.",
-      });
-    } finally {
-      setIsProcessing(false);
-    }
+      await save({ status: isTopic ? "pending" : "in_review", reviewDecision: "none" });
+      setFeedback({ type: "success", text: "Your content has been submitted and is awaiting founder approval." });
+    } catch (err: unknown) {
+      setFeedback({ type: "error", text: err instanceof Error ? err.message : "Submission failed." });
+    } finally { busy.current = false; setIsProcessing(false); }
   };
 
   // 5. FOUNDER: UNPUBLISH
@@ -228,21 +180,7 @@ export function PublishControlsClient({
     setIsProcessing(true);
     setFeedback(null);
     try {
-      dispatchFields({ type: "UPDATE", path: "status", value: "draft" });
-      await submit();
-
-      if (id) {
-        await fetch("/api/admin/content-reviews", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "request-changes",
-            collection: collectionSlug,
-            id,
-            notes: "Unpublished by Founder back to draft.",
-          }),
-        });
-      }
+      await save({ status: "draft" });
 
       setFeedback({
         type: "info",
@@ -265,7 +203,7 @@ export function PublishControlsClient({
         </span>
       );
     }
-    if (currentStatus === "in_review") {
+    if ((currentStatus === "in_review" || currentStatus === "pending")) {
       return (
         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200">
           <Clock className="w-3.5 h-3.5 text-amber-600" />
@@ -379,7 +317,7 @@ export function PublishControlsClient({
         <button
           type="button"
           onClick={handleSaveDraft}
-          disabled={isProcessing}
+          disabled={isProcessing || (!isFounder && ["pending", "in_review", "published", "scheduled", "archived"].includes(currentStatus))}
           className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-white border border-zinc-300 text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 transition flex items-center gap-1.5 shadow-2xs disabled:opacity-50"
         >
           {isProcessing ? (
@@ -408,7 +346,7 @@ export function PublishControlsClient({
             <button
               type="button"
               onClick={handlePublishNow}
-              disabled={isProcessing}
+              disabled={isProcessing || (currentStatus === "published" && !modified)}
               className="px-4 py-1.5 rounded-lg text-xs font-bold bg-emerald-700 hover:bg-emerald-800 text-white transition flex items-center gap-1.5 shadow-xs disabled:opacity-50"
             >
               {isProcessing ? (
@@ -439,7 +377,7 @@ export function PublishControlsClient({
           <button
             type="button"
             onClick={handleSubmitForApproval}
-            disabled={isProcessing || currentStatus === "in_review"}
+            disabled={isProcessing || ["pending", "in_review", "published", "scheduled", "archived"].includes(currentStatus)}
             className="px-4 py-1.5 rounded-lg text-xs font-bold bg-indigo-700 hover:bg-indigo-800 text-white transition flex items-center gap-1.5 shadow-xs disabled:opacity-50"
           >
             {isProcessing ? (
@@ -448,7 +386,7 @@ export function PublishControlsClient({
               <Send className="w-3.5 h-3.5 text-indigo-200" />
             )}
             <span>
-              {currentStatus === "in_review"
+              {(currentStatus === "in_review" || currentStatus === "pending")
                 ? "Submitted for Approval"
                 : "Submit for Approval"}
             </span>

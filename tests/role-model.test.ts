@@ -75,7 +75,7 @@ test("Role 2 (Approved Editor) authorization checks", () => {
       },
       {
         status: {
-          not_in: ["published", "archived"],
+          equals: "draft",
         },
       },
     ],

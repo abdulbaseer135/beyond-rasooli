@@ -105,6 +105,7 @@ export const contentChanged: CollectionAfterChangeHook = async ({
       if (isResubmission) {
         await createFounderNotification({
           payload: req.payload,
+          req,
           type: isArticle ? "article_resubmission" : "video_resubmission",
           title: `${labelPrefix} Resubmission`,
           message: `${editorName} resubmitted "${doc.title || "Untitled"}" for your approval.`,
@@ -112,12 +113,13 @@ export const contentChanged: CollectionAfterChangeHook = async ({
           targetCollection: targetCol,
           targetId: doc.id,
           submissionRevision: `rev-${doc.updatedAt || Date.now()}`,
-          deduplicationKey: `${collection.slug}:${doc.id}:resubmission:${doc.updatedAt || Date.now()}`,
+          deduplicationKey: `${collection.slug}:${doc.id}:resubmission:${previousDoc?.updatedAt || doc.updatedAt}`,
           link: `/admin/content-approvals?type=${isArticle ? "article" : "video"}&id=${doc.id}`,
         });
       } else {
         await createFounderNotification({
           payload: req.payload,
+          req,
           type: isArticle ? "article_approval" : "video_approval",
           title: `New ${labelPrefix} Awaiting Approval`,
           message: `${editorName} submitted "${doc.title || "Untitled"}" for your approval.`,
@@ -125,7 +127,7 @@ export const contentChanged: CollectionAfterChangeHook = async ({
           targetCollection: targetCol,
           targetId: doc.id,
           submissionRevision: `rev-${doc.updatedAt || Date.now()}`,
-          deduplicationKey: `${collection.slug}:${doc.id}:submission:${doc.updatedAt || Date.now()}`,
+          deduplicationKey: `${collection.slug}:${doc.id}:submission:${previousDoc?.updatedAt || doc.updatedAt}`,
           link: `/admin/content-approvals?type=${isArticle ? "article" : "video"}&id=${doc.id}`,
         });
       }
@@ -143,6 +145,7 @@ export const contentChanged: CollectionAfterChangeHook = async ({
       );
       await resolveFounderNotifications({
         payload: req.payload,
+        req,
         targetCollection: targetCol,
         targetId: doc.id,
       });

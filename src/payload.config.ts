@@ -11,6 +11,7 @@ import { buildConfig } from 'payload';
 import { sqliteAdapter } from '@payloadcms/db-sqlite';
 import { postgresAdapter } from '@payloadcms/db-postgres';
 import { lexicalEditor, BlocksFeature } from '@payloadcms/richtext-lexical';
+import { horizontalRuleFeature } from './lib/editor-horizontal-rule';
 
 import { Users } from './collections/Users';
 import { Media } from './collections/Media';
@@ -109,7 +110,7 @@ export default buildConfig({
     SlugRedirects,
   ],
   globals: [SiteSettings],
-  editor: lexicalEditor({features:({defaultFeatures})=>[...defaultFeatures,BlocksFeature({blocks:[{slug:'pullQuote',fields:[{name:'quote',type:'textarea',required:true},{name:'attribution',type:'text'}]},{slug:'evidenceNote',fields:[{name:'status',type:'select',required:true,options:['established','emerging','debated']},{name:'text',type:'textarea',required:true}]},{slug:'part',fields:[{name:'partNumber',type:'number',required:true,min:1},{name:'title',type:'text',required:true}]},{slug:'video',fields:[{name:'youtubeUrl',type:'text',required:true},{name:'title',type:'text',required:true}]}]})]}),
+  editor: lexicalEditor({features:({defaultFeatures})=>[...defaultFeatures.map(feature => feature.key === 'horizontalRule' ? horizontalRuleFeature() : feature),BlocksFeature({blocks:[{slug:'pullQuote',fields:[{name:'quote',type:'textarea',required:true},{name:'attribution',type:'text'}]},{slug:'evidenceNote',fields:[{name:'status',type:'select',required:true,options:['established','emerging','debated']},{name:'text',type:'textarea',required:true}]},{slug:'part',fields:[{name:'partNumber',type:'number',required:true,min:1},{name:'title',type:'text',required:true}]},{slug:'video',fields:[{name:'youtubeUrl',type:'text',required:true},{name:'title',type:'text',required:true}]}]})]}),
   secret: process.env.PAYLOAD_SECRET || 'beyond-rasooli-dev-secret-32-chars-long-abc-xyz',
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts'),

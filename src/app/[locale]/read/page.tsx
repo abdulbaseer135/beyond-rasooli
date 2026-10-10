@@ -47,7 +47,7 @@ export default async function LibraryPage({
               async (l) => (await getLibrary(l)).articles,
             ),
           )
-        ).flat()
+        ).flat().filter((article, index, all) => all.findIndex(other => other.id === article.id) === index)
       : ["en", "ps", "fa"].includes(requested)
         ? (await getLibrary(requested as Locale)).articles
         : [];

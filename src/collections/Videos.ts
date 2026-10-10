@@ -6,6 +6,7 @@ import { contentChanged } from "./shared/content-changes";
 import { publicContentRead, contentState, contentIdentity } from "./shared/publication";
 import type { CollectionConfig } from "payload";
 import { sourceFields } from "./shared/sources";
+import { editorialContentCreateAccess, editorialContentUpdateAccess } from "./shared/auth-roles";
 
 export const Videos: CollectionConfig = {
   slug: "videos",
@@ -28,23 +29,8 @@ export const Videos: CollectionConfig = {
   },
   access: {
     read: publicContentRead,
-    update: ({ req: { user }, data }) => {
-      if (!user) return false;
-      if (user.role === "admin") return true;
-      if (user.role !== "editor" || (user.status && user.status !== "approved")) return false;
-      if (
-        data?.status === "published" ||
-        data?.status === "archived" ||
-        data?.status === "scheduled"
-      )
-        return false;
-      return true;
-    },
-    create: ({ req: { user } }) =>
-      Boolean(
-        user?.role === "admin" ||
-          (user?.role === "editor" && (user?.status === "approved" || !user?.status)),
-      ),
+    update: editorialContentUpdateAccess,
+    create: editorialContentCreateAccess,
     delete: ({ req: { user } }) => user?.role === "admin",
   },
   hooks: {
@@ -192,26 +178,16 @@ export const Videos: CollectionConfig = {
               label: "Author",
               type: "relationship",
               relationTo: "users",
-              admin: {
-                readOnly: true,
-                description:
-                  "Author byline. Automatically populated with the authenticated contributor's account.",
-              },
-              access: {
-                update: ({ req: { user } }) => user?.role === "admin",
-              },
+              admin: { readOnly: true },
+              access: { update: ({ req: { user } }) => user?.role === "admin" },
             },
             {
               name: "authorProfile",
               label: "Author Profile",
               type: "relationship",
               relationTo: "authors",
-              admin: {
-                condition: () => false,
-              },
-              access: {
-                update: ({ req: { user } }) => user?.role === "admin",
-              },
+              admin: { condition: () => false },
+              access: { update: ({ req: { user } }) => user?.role === "admin" },
             },
             {
               name: "slug",

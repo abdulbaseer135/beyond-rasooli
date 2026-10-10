@@ -405,6 +405,11 @@ export interface Article {
  */
 export interface Topic {
   id: number;
+  submittedBy?: (number | null) | User;
+  reviewDecision?: ('none' | 'approved' | 'changes_requested' | 'rejected') | null;
+  reviewNotes?: string | null;
+  reviewedBy?: (number | null) | User;
+  reviewedAt?: string | null;
   name: string;
   /**
    * URL slug (auto-generated from topic name if left blank)
@@ -465,9 +470,6 @@ export interface Video {
    * Optional companion long-form article. Powers the Go Deeper bridge under the video player.
    */
   relatedArticle?: (number | null) | Article;
-  /**
-   * Author byline. Automatically populated with the authenticated contributor's account.
-   */
   author?: (number | null) | User;
   authorProfile?: (number | null) | Author;
   /**
@@ -604,6 +606,7 @@ export interface UiString {
   key: string;
   namespace:
     | 'ui'
+    | 'admin_content'
     | 'nav'
     | 'home'
     | 'watch'
@@ -663,14 +666,20 @@ export interface Notification {
    * Founder administrator who receives this notification
    */
   recipient: number | User;
-  type: 'editor_registration' | 'article_approval' | 'video_approval' | 'article_resubmission' | 'video_resubmission';
+  type:
+    | 'editor_registration'
+    | 'article_approval'
+    | 'video_approval'
+    | 'topic_approval'
+    | 'article_resubmission'
+    | 'video_resubmission';
   title: string;
   message: string;
   /**
    * Contributing editor or applicant triggering the event
    */
   actor?: (number | null) | User;
-  targetCollection?: ('users' | 'articles' | 'videos') | null;
+  targetCollection?: ('users' | 'articles' | 'videos' | 'topics') | null;
   targetId?: string | null;
   submissionRevision?: string | null;
   /**
@@ -1109,6 +1118,11 @@ export interface VideosSelect<T extends boolean = true> {
  * via the `definition` "topics_select".
  */
 export interface TopicsSelect<T extends boolean = true> {
+  submittedBy?: T;
+  reviewDecision?: T;
+  reviewNotes?: T;
+  reviewedBy?: T;
+  reviewedAt?: T;
   name?: T;
   slug?: T;
   status?: T;

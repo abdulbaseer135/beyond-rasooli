@@ -60,7 +60,7 @@ export const editorialContentUpdateAccess: Access = ({ req: { user }, data }) =>
       },
       {
         status: {
-          not_in: ["published", "archived"],
+          equals: "draft",
         },
       },
     ],

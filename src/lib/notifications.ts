@@ -5,7 +5,8 @@ export type NotificationType =
   | "article_approval"
   | "video_approval"
   | "article_resubmission"
-  | "video_resubmission";
+  | "video_resubmission"
+  | "topic_approval";
 
 export interface CreateNotificationParams {
   payload: Payload;
@@ -13,7 +14,7 @@ export interface CreateNotificationParams {
   title: string;
   message: string;
   actorId?: number | string | null;
-  targetCollection?: "users" | "articles" | "videos";
+  targetCollection?: "users" | "articles" | "videos" | "topics";
   targetId?: number | string | null;
   submissionRevision?: string | null;
   deduplicationKey: string;
@@ -129,14 +130,17 @@ export async function resolveFounderNotifications({
   payload,
   targetCollection,
   targetId,
+  req,
 }: {
   payload: Payload;
-  targetCollection: "users" | "articles" | "videos";
+  targetCollection: "users" | "articles" | "videos" | "topics";
   targetId: number | string;
+  req?: any;
 }) {
   try {
     const stringId = String(targetId);
     const pending = await payload.find({
+      req,
       collection: "notifications",
       where: {
         and: [
@@ -153,6 +157,7 @@ export async function resolveFounderNotifications({
     for (const notif of pending.docs) {
       await payload.update({
         collection: "notifications",
+        req,
         id: notif.id,
         overrideAccess: true,
         data: {

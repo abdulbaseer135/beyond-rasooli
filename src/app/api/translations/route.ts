@@ -61,11 +61,12 @@ export async function GET(req: Request) {
         ? await getArticleBySlug(parts[1], locale)
         : await getVideoBySlug(parts[1], locale);
     if (doc) {
-      links = await getTranslations(
+      links = Object.fromEntries(locales.map(target => [target, `/${target}/${parts[0]}/${doc.slug}`]));
+      links = { ...links, ...await getTranslations(
         parts[0] === "read" ? "articles" : "videos",
         doc.translationGroup,
-        true,
-      );
+        false,
+      ) };
     }
   } else {
     for (const target of locales) {

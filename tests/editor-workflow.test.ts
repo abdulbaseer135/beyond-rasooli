@@ -71,7 +71,7 @@ test("Topic beforeValidate forces editor proposals to status 'pending'", async (
   assert(beforeValidateHook, "beforeValidate hook must exist on Topics");
 
   // Editor attempting to publish directly
-  const editorReq = { user: { role: "editor" } } as any;
+  const editorReq = { user: { id: 8, role: "editor", status: "approved" } } as any;
   const editorData = { name: "Neuroplasticity", status: "published" };
   const result = await beforeValidateHook({
     data: editorData,
@@ -176,6 +176,7 @@ test("Users beforeChange prevents non-admin users from altering role or status",
   const result = await (beforeChangeHook as any)({
     data: maliciousData,
     originalDoc,
+    operation: "update",
     req: nonAdminReq,
   });
 

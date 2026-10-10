@@ -6,6 +6,7 @@ import { getTranslations as documentTranslations } from "@/lib/data/cms";
 export async function contentMetadata(
   collection: "articles" | "videos",
   doc: {
+    sourceLanguage?: Locale;
     title: string;
     slug: string;
     translationGroup: string;
@@ -39,8 +40,8 @@ export async function contentMetadata(
   return {
     title,
     description,
-    alternates: { canonical: path, languages },
-    robots: { index: doc.translationStatus !== "machine_draft", follow: true },
+    alternates: { canonical: doc.sourceLanguage ? `/${doc.sourceLanguage}/${collection === "articles" ? "read" : "watch"}/${doc.slug}` : path, languages },
+    robots: { index: !doc.sourceLanguage && doc.translationStatus !== "machine_draft", follow: true },
     openGraph: {
       title,
       description,

@@ -1,3 +1,4 @@
+import { withContentLock } from "@/lib/content-lock";
 import { NextResponse } from "next/server";
 import { getPayload } from "payload";
 import configPromise from "@payload-config";
@@ -41,9 +42,11 @@ export async function POST(req: Request) {
       );
     }
 
+    return await withContentLock(payload, `${collection}:${id}`, async () => {
     const doc = await payload.findByID({
       collection: collection as AllowedCollection,
       id,
+      locale: collection === "topics" ? "all" : undefined,
       overrideAccess: true,
     });
 
@@ -54,13 +57,16 @@ export async function POST(req: Request) {
       );
     }
 
-    const contentTitle = (doc as any).title || (doc as any).name || id;
+    const names = (doc as any).name;
+    const topicLocale = names && typeof names === "object" ? (["en", "ps", "fa"] as const).find(locale => names[locale]?.trim()) : "en";
+    const contentTitle = (doc as any).title || (names && typeof names === "object" ? names[topicLocale || "en"] : names) || id;
 
     const { resolveFounderNotifications } = await import("@/lib/notifications");
 
     switch (action) {
       case "approve": {
         if (collection === "topics") {
+          if (doc.status === "published") return NextResponse.json({ success: true });
           if ((doc as any).status !== "pending") {
             return NextResponse.json(
               { error: `Topic is not awaiting approval (current status: ${(doc as any).status}).` },
@@ -69,10 +75,12 @@ export async function POST(req: Request) {
           }
           await payload.update({
             collection: "topics" as any,
+            locale: topicLocale,
             id,
+            user,
             overrideAccess: true,
             data: {
-              status: "published",
+              status: "published", reviewDecision: "approved", reviewNotes: "", reviewedBy: user.id, reviewedAt: new Date().toISOString(),
             } as any,
           });
           return NextResponse.json({
@@ -81,6 +89,7 @@ export async function POST(req: Request) {
           });
         }
 
+        if (doc.status === "published") return NextResponse.json({ success: true });
         // For articles and videos: verify the document is actually awaiting review
         if ((doc as any).status !== "in_review") {
           return NextResponse.json(
@@ -180,10 +189,8 @@ export async function POST(req: Request) {
 
       case "request-changes": {
         if (collection === "topics") {
-          return NextResponse.json({
-            success: true,
-            message: "Topics can be approved or kept in draft.",
-          });
+          await payload.update({ collection: "topics", locale: topicLocale, id, user, overrideAccess: true, data: { status: "draft", reviewDecision: "changes_requested", reviewNotes: typeof notes === "string" ? notes.trim() : "" } });
+          return NextResponse.json({ success: true });
         }
 
         await payload.update({
@@ -214,11 +221,12 @@ export async function POST(req: Request) {
         if (collection === "topics") {
           await payload.update({
             collection: "topics" as any,
+            locale: topicLocale,
             id,
             user,
             overrideAccess: true,
             data: {
-              status: "draft",
+              status: "draft", reviewDecision: "rejected", reviewNotes: typeof notes === "string" ? notes.trim() : "", reviewedBy: user.id, reviewedAt: new Date().toISOString(),
             } as any,
           });
           return NextResponse.json({
@@ -257,6 +265,7 @@ export async function POST(req: Request) {
           { status: 400 },
         );
     }
+    });
   } catch (error: any) {
     console.error("Content review API error:", error);
     const message =
@@ -265,7 +274,7 @@ export async function POST(req: Request) {
       "Failed to process review action.";
     return NextResponse.json(
       { error: message },
-      { status: 400 },
+      { status: error?.status || 400 },
     );
   }
 }

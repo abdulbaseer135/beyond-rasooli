@@ -80,7 +80,7 @@ export default async function ArticleDetailPage({
     .slice(0, 3 - relatedArticles.length);
 
   return (
-    <article className="site-container py-10 space-y-12 text-start">
+    <article className="site-container py-10 space-y-12 text-start" lang={article.language === "fa" ? "fa-AF" : article.language} dir={article.language === "en" ? "ltr" : "rtl"}>
       {/* JSON-LD Article Structured Data (PRD Section 14) */}
       <script
         type="application/ld+json"
@@ -116,6 +116,7 @@ export default async function ArticleDetailPage({
         }
       />
 
+      {article.translationUnavailable && <p className="article-measure mx-auto type-meta">{ui("translation_unavailable")}</p>}
       {article.translationStatus === "machine_draft" && (
         <p className="article-measure mx-auto type-meta">
           {ui("translation_notice")}
@@ -160,7 +161,7 @@ export default async function ArticleDetailPage({
           <figcaption className="type-meta">{article.coverCaption}</figcaption>
         </figure>
       )}
-      <RichText locale={locale} data={article.body} />
+      <div lang={article.sourceLanguage === "fa" ? "fa-AF" : article.sourceLanguage || locale} dir={(article.sourceLanguage || locale) === "en" ? "ltr" : "rtl"}><RichText locale={article.sourceLanguage || locale} data={article.body} /></div>
 
       {/* 4. Evidence Note */}
       {article.evidenceNote?.status && article.evidenceNote?.text && (

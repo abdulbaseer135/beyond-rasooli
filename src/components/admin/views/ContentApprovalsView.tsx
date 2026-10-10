@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { User } from "@/payload-types";
 import { AdminShell } from "./AdminShell";
 import {
@@ -30,14 +31,24 @@ export interface PendingContentItem {
 interface ContentApprovalsViewProps {
   user: User;
   initialItems: PendingContentItem[];
+  reviewCounts: { pending: number; changes: number; rejected: number };
 }
 
 export function ContentApprovalsView({
   user,
   initialItems,
+  reviewCounts,
 }: ContentApprovalsViewProps) {
-  const [items, setItems] = useState<PendingContentItem[]>(initialItems);
-  const [activeTab, setActiveTab] = useState<"pending" | "changes" | "rejected">("pending");
+  const items = initialItems;
+  const router = useRouter();
+  const query = useSearchParams();
+  const activeTab = query.get("state") === "changes_requested" ? "changes" : query.get("state") === "rejected" ? "rejected" : "pending";
+  const setActiveTab = (value: "pending" | "changes" | "rejected") => {
+    const next = new URLSearchParams(query);
+    next.set("state", value === "pending" ? "in_review" : value === "changes" ? "changes_requested" : "rejected");
+    next.set("page", "1");
+    router.push(`/admin/content-approvals?${next}`);
+  };
   const [loadingId, setLoadingId] = useState<string | number | null>(null);
   const [feedbackModal, setFeedbackModal] = useState<{
     id: string | number;
@@ -99,38 +110,14 @@ export function ContentApprovalsView({
       if (!res.ok) {
         setMessage({ type: "error", text: data.error || "Action failed." });
       } else {
+        router.refresh();
         setMessage({
           type: "success",
           text: data.message || "Updated successfully.",
           liveUrl: data.liveUrl,
         });
-        if (action === "approve") {
-          setItems((prev) => prev.filter((i) => i.id !== id));
-        } else if (action === "request-changes") {
-          setItems((prev) =>
-            prev.map((i) =>
-              i.id === id
-                ? {
-                    ...i,
-                    reviewDecision: "changes_requested",
-                    reviewNotes: notes,
-                  }
-                : i,
-            ),
-          );
-          setFeedbackModal(null);
-          setFeedbackNote("");
-        } else if (action === "reject") {
-          setItems((prev) =>
-            prev.map((i) =>
-              i.id === id
-                ? { ...i, reviewDecision: "rejected", reviewNotes: notes }
-                : i,
-            ),
-          );
-          setFeedbackModal(null);
-          setFeedbackNote("");
-        }
+        setFeedbackModal(null);
+        setFeedbackNote("");
       }
     } catch {
       setMessage({ type: "error", text: "Network error occurred." });
@@ -185,11 +172,7 @@ export function ContentApprovalsView({
           >
             Awaiting Approval (
             {
-              items.filter(
-                (i) =>
-                  i.status === "in_review" ||
-                  (i.type === "topic" && i.status === "pending"),
-              ).length
+              reviewCounts.pending
             }
             )
           </button>
@@ -204,7 +187,7 @@ export function ContentApprovalsView({
             }`}
           >
             Changes Requested (
-            {items.filter((i) => i.reviewDecision === "changes_requested").length}
+            {reviewCounts.changes}
             )
           </button>
 
@@ -218,7 +201,7 @@ export function ContentApprovalsView({
             }`}
           >
             Rejected (
-            {items.filter((i) => i.reviewDecision === "rejected").length}
+            {reviewCounts.rejected}
             )
           </button>
         </div>
@@ -267,7 +250,7 @@ export function ContentApprovalsView({
                           {item.submittedBy || "Editor"}
                         </span>
                         {item.submittedAt &&
-                          ` • ${new Date(item.submittedAt).toLocaleDateString()}`}
+                          ` • ${new Date(item.submittedAt).toLocaleDateString("en-GB", { timeZone: "UTC" })}`}
                       </p>
                     </div>
 

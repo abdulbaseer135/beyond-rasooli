@@ -1,5 +1,5 @@
 import { creationHelpField } from "./shared/creation-help";
-import type { CollectionConfig } from "payload";
+import { APIError, type CollectionConfig } from "payload";
 import { invalid } from "./shared/validation";
 
 export const Users: CollectionConfig = {
@@ -82,35 +82,41 @@ export const Users: CollectionConfig = {
         if (user.role === "admin") return user;
         const status = (user as unknown as { status?: string }).status;
         if (status === "pending") {
-          throw new Error(
+          throw new APIError(
             "Your editor application is pending approval by the founder.",
+            403, undefined, true,
           );
         }
         if (status === "suspended") {
-          throw new Error(
+          throw new APIError(
             "Your editor account has been suspended by the founder.",
+            403, undefined, true,
           );
         }
         if (status === "rejected") {
-          throw new Error(
+          throw new APIError(
             "Your editor application was not approved by the founder.",
+            403, undefined, true,
           );
         }
         return user;
       },
     ],
     beforeChange: [
-      async ({ data, originalDoc, req }) => {
-        if (req.user?.role !== "admin") {
+      async ({ data, originalDoc, req, operation }) => {
+        if (operation === "update" && req.user?.role !== "admin") {
           if (originalDoc) {
             data.role = originalDoc.role;
             data.status = originalDoc.status;
             data.rejectionReason = originalDoc.rejectionReason;
             data.appliedAt = originalDoc.appliedAt;
-            data.authorProfile = originalDoc.authorProfile;
+            if (!req.context?.syncingAuthorProfile) {
+              data.authorProfile = originalDoc.authorProfile;
+            }
           }
         }
         if (
+          operation === "update" &&
           originalDoc?.role === "admin" &&
           data.role &&
           data.role !== "admin"
@@ -128,6 +134,7 @@ export const Users: CollectionConfig = {
     ],
     afterChange: [
       async ({ doc, previousDoc, req }) => {
+        if (req.context?.syncingAuthorProfile) return;
         // Automatically sync or create public Author profile for founder and approved editors
         if (doc.role === "admin" || doc.status === "approved") {
           try {
@@ -187,6 +194,7 @@ export const Users: CollectionConfig = {
                 id: doc.id,
                 req,
                 overrideAccess: true,
+                context: { syncingAuthorProfile: true },
                 data: { authorProfile: createdId },
               });
             }
@@ -203,6 +211,7 @@ export const Users: CollectionConfig = {
             );
             await createFounderNotification({
               payload: req.payload,
+              req,
               type: "editor_registration",
               title: "New Editor Registration",
               message: `${doc.name} has requested to join Beyond Rasooli as an editor.`,
@@ -228,6 +237,7 @@ export const Users: CollectionConfig = {
             );
             await resolveFounderNotifications({
               payload: req.payload,
+              req,
               targetCollection: "users",
               targetId: doc.id,
             });

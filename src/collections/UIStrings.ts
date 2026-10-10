@@ -125,6 +125,7 @@ export const UIStrings: CollectionConfig = {
               label: "Namespace / Category",
               options: [
                 { label: "Interface", value: "ui" },
+                { label: "Editorial Dashboard", value: "admin_content" },
                 { label: "Navigation", value: "nav" },
                 { label: "Home Page", value: "home" },
                 { label: "Watch Library", value: "watch" },

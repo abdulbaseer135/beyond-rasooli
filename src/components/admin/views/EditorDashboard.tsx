@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { User } from "@/payload-types";
 import { AdminShell } from "./AdminShell";
@@ -11,16 +12,13 @@ import {
   CheckCircle2,
   XCircle,
   PlusCircle,
-  ExternalLink,
   User as UserIcon,
-  Inbox,
-  Eye,
 } from "lucide-react";
 
 export interface EditorSubmissionItem {
   id: string | number;
   title: string;
-  type: "article" | "video";
+  type: "article" | "video" | "topic";
   status: string;
   reviewDecision?: string;
   reviewNotes?: string;
@@ -30,6 +28,7 @@ export interface EditorSubmissionItem {
 }
 
 interface EditorDashboardProps {
+  contentList?: React.ReactNode;
   user: User;
   stats: {
     myDrafts: number;
@@ -44,28 +43,18 @@ interface EditorDashboardProps {
 export function EditorDashboard({
   user,
   stats,
-  mySubmissions,
+  contentList,
 }: EditorDashboardProps) {
-  const [filterTab, setFilterTab] = useState<
-    "all" | "draft" | "in_review" | "changes_requested" | "rejected" | "published"
-  >("all");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const filterTab = searchParams.get("state") || "all";
+  const setFilterTab = (value: string) => {
+    const query = new URLSearchParams(searchParams);
+    if (value === "all") query.delete("state"); else query.set("state", value);
+    query.set("page", "1");
+    router.push(`/admin?${query}`);
+  };
 
-  const filteredItems = mySubmissions.filter((item) => {
-    if (filterTab === "all") return true;
-    if (filterTab === "draft") {
-      return (
-        item.status === "draft" &&
-        item.reviewDecision !== "changes_requested" &&
-        item.reviewDecision !== "rejected"
-      );
-    }
-    if (filterTab === "in_review") return item.status === "in_review";
-    if (filterTab === "changes_requested")
-      return item.reviewDecision === "changes_requested";
-    if (filterTab === "rejected") return item.reviewDecision === "rejected";
-    if (filterTab === "published") return item.status === "published";
-    return true;
-  });
 
   return (
     <AdminShell
@@ -256,220 +245,7 @@ export function EditorDashboard({
           </button>
         </div>
 
-        {/* Filter Tabs Header */}
-        <div className="flex border-b border-zinc-200 gap-4 overflow-x-auto text-xs sm:text-sm font-semibold">
-          <button
-            type="button"
-            onClick={() => setFilterTab("all")}
-            className={`pb-3 transition border-b-2 whitespace-nowrap ${
-              filterTab === "all"
-                ? "border-zinc-900 text-zinc-900"
-                : "border-transparent text-zinc-500 hover:text-zinc-800"
-            }`}
-          >
-            All Submissions ({mySubmissions.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterTab("draft")}
-            className={`pb-3 transition border-b-2 whitespace-nowrap ${
-              filterTab === "draft"
-                ? "border-zinc-900 text-zinc-900"
-                : "border-transparent text-zinc-500 hover:text-zinc-800"
-            }`}
-          >
-            Drafts ({stats.myDrafts})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterTab("in_review")}
-            className={`pb-3 transition border-b-2 whitespace-nowrap ${
-              filterTab === "in_review"
-                ? "border-amber-600 text-amber-800"
-                : "border-transparent text-zinc-500 hover:text-zinc-800"
-            }`}
-          >
-            Awaiting Approval ({stats.awaitingApproval})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterTab("changes_requested")}
-            className={`pb-3 transition border-b-2 whitespace-nowrap ${
-              filterTab === "changes_requested"
-                ? "border-orange-600 text-orange-800"
-                : "border-transparent text-zinc-500 hover:text-zinc-800"
-            }`}
-          >
-            Changes Requested ({stats.changesRequested})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterTab("rejected")}
-            className={`pb-3 transition border-b-2 whitespace-nowrap ${
-              filterTab === "rejected"
-                ? "border-rose-600 text-rose-800"
-                : "border-transparent text-zinc-500 hover:text-zinc-800"
-            }`}
-          >
-            Rejected ({stats.rejectedSubmissions})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterTab("published")}
-            className={`pb-3 transition border-b-2 whitespace-nowrap ${
-              filterTab === "published"
-                ? "border-emerald-600 text-emerald-800"
-                : "border-transparent text-zinc-500 hover:text-zinc-800"
-            }`}
-          >
-            Published ({stats.publishedContributions})
-          </button>
-        </div>
-
-        {/* Submissions List */}
-        <div className="rounded-2xl border border-zinc-200 bg-white shadow-xs overflow-hidden">
-          {filteredItems.length === 0 ? (
-            <div className="p-12 text-center text-zinc-500 space-y-3">
-              <Inbox className="w-8 h-8 text-zinc-400 mx-auto" />
-              <p className="text-sm font-medium text-zinc-700">
-                No items in this filter
-              </p>
-              <p className="text-xs text-zinc-400 max-w-sm mx-auto">
-                {filterTab === "all"
-                  ? 'Click "Create New Article" or "Add New Video" above to begin your first submission.'
-                  : `You have no submissions currently under "${filterTab.replace(/_/g, " ")}".`}
-              </p>
-            </div>
-          ) : (
-            <div className="divide-y divide-zinc-100">
-              {filteredItems.map((sub) => {
-                const isChangesRequested =
-                  sub.reviewDecision === "changes_requested";
-                const isRejected = sub.reviewDecision === "rejected";
-                const isPublished = sub.status === "published";
-                const isReviewing = sub.status === "in_review";
-
-                const collectionPath =
-                  sub.type === "article" ? "articles" : "videos";
-                const publicSection =
-                  sub.type === "article" ? "read" : "watch";
-                const publicUrl = `/${sub.language || "en"}/${publicSection}/${sub.slug || sub.id}`;
-
-                return (
-                  <div
-                    key={`${sub.type}-${sub.id}`}
-                    className="p-5 flex flex-col gap-3 hover:bg-zinc-50/50 transition"
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="px-2 py-0.5 rounded text-[11px] font-semibold uppercase bg-zinc-100 text-zinc-700">
-                            {sub.type}
-                          </span>
-                          {sub.language && (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-zinc-100 text-zinc-600 uppercase">
-                              {sub.language}
-                            </span>
-                          )}
-                          <h3 className="text-sm sm:text-base font-bold text-zinc-900">
-                            {sub.title}
-                          </h3>
-                        </div>
-                        {sub.updatedAt && (
-                          <p className="text-xs text-zinc-400">
-                            Last edited:{" "}
-                            {new Date(sub.updatedAt).toLocaleDateString()}
-                          </p>
-                        )}
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
-                        {isPublished && (
-                          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                            Published
-                          </span>
-                        )}
-                        {isReviewing && !isChangesRequested && !isRejected && (
-                          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">
-                            Awaiting Founder Approval
-                          </span>
-                        )}
-                        {isChangesRequested && (
-                          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-800 border border-orange-200">
-                            Changes Requested
-                          </span>
-                        )}
-                        {isRejected && (
-                          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-800 border border-rose-200">
-                            Rejected
-                          </span>
-                        )}
-                        {sub.status === "draft" &&
-                          !isChangesRequested &&
-                          !isRejected && (
-                            <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-zinc-100 text-zinc-600 border border-zinc-200">
-                              Draft
-                            </span>
-                          )}
-
-                        {/* Public Link for Published Content */}
-                        {isPublished && (
-                          <a
-                            href={publicUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="px-3 py-1 rounded-lg border border-emerald-300 text-emerald-800 hover:bg-emerald-50 text-xs font-medium transition inline-flex items-center gap-1"
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                            <span>View Live</span>
-                          </a>
-                        )}
-
-                        {/* Preview for Unpublished Content */}
-                        {!isPublished && (
-                          <a
-                            href={`/${sub.language || "en"}/preview?collection=${collectionPath}&id=${sub.id}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="px-3 py-1 rounded-lg border border-zinc-200 text-zinc-700 hover:bg-zinc-100 text-xs font-medium transition inline-flex items-center gap-1"
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                            <span>Preview</span>
-                          </a>
-                        )}
-
-                        {/* Edit Document Link */}
-                        <Link
-                          href={`/admin/collections/${collectionPath}/${sub.id}`}
-                          className="px-3.5 py-1 rounded-lg border border-zinc-200 text-xs font-semibold text-zinc-800 hover:bg-zinc-100 transition inline-flex items-center gap-1"
-                        >
-                          {isPublished ? "Propose Revision" : "Edit Draft"}
-                          <ExternalLink className="w-3 h-3" />
-                        </Link>
-                      </div>
-                    </div>
-
-                    {/* Feedback Notes from Founder if Changes Requested or Rejected */}
-                    {sub.reviewNotes && (
-                      <div
-                        className={`p-3 rounded-xl border text-xs ${
-                          isChangesRequested
-                            ? "bg-orange-50/80 border-orange-200 text-orange-900"
-                            : "bg-rose-50/80 border-rose-200 text-rose-900"
-                        }`}
-                      >
-                        <span className="font-semibold block mb-0.5">
-                          Founder Feedback:
-                        </span>
-                        <p className="whitespace-pre-wrap">{sub.reviewNotes}</p>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+        {contentList}
       </div>
     </AdminShell>
   );

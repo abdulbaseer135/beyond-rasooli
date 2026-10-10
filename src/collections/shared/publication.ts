@@ -4,9 +4,9 @@ import { extractYouTubeId } from "@/lib/youtube";
 import { invalid } from "./validation";
 import { slugify } from "./slug";
 import { ValidationError, type CollectionBeforeValidateHook } from "payload";
-import type { Access, CollectionBeforeChangeHook, Where } from "payload";
-export const publicContentRead: Access = async ({ req }) => {
-  if (req.user) return true;
+import type { Access, AccessResult, CollectionBeforeChangeHook, Where } from "payload";
+export const publicContentRead: Access = async ({ req }): Promise<AccessResult> => {
+  if (req.user?.role === "admin") return true;
   let requireReview = true;
   try {
     const cached = req.context ? (req.context as Record<string, unknown>)._requireReviewBeforePublic : undefined;
@@ -45,6 +45,9 @@ export const publicContentRead: Access = async ({ req }) => {
       ],
     });
   }
+  if (req.user?.role === "editor" && req.user.status === "approved") {
+    return { or: [{ and: clauses }, { author: { equals: req.user.id } }, { submittedBy: { equals: req.user.id } }] };
+  }
   return { and: clauses };
 };
 export function calculateReadingTime(prose: string): number {
@@ -73,7 +76,7 @@ export const contentState: CollectionBeforeChangeHook = async ({
     !system &&
     (!["draft", "in_review"].includes(status) ||
       (originalDoc?.status &&
-        !["draft", "in_review"].includes(originalDoc.status)))
+        originalDoc.status !== "draft"))
   )
     await invalid(req, "status", "admin_required");
   if (status === "scheduled" && (!Number.isFinite(Date.parse(data.publishedAt ?? originalDoc?.publishedAt)) || Date.parse(data.publishedAt ?? originalDoc?.publishedAt) <= Date.now())) await invalid(req, "publishedAt", "schedule_required");

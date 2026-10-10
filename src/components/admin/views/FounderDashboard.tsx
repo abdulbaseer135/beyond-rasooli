@@ -15,10 +15,13 @@ import {
 } from "lucide-react";
 
 interface FounderDashboardProps {
+  contentList?: React.ReactNode;
+  topicsLabel: string;
   user: User;
   stats: {
     publishedArticles: number;
     publishedVideos: number;
+    publishedTopics: number;
     pendingApplications: number;
     awaitingApproval: number;
     activeEditors: number;
@@ -37,6 +40,8 @@ export function FounderDashboard({
   user,
   stats,
   recentSubmissions,
+  contentList,
+  topicsLabel,
 }: FounderDashboardProps) {
   return (
     <AdminShell
@@ -63,6 +68,8 @@ export function FounderDashboard({
       }
     >
       <div className="space-y-8">
+        {contentList}
+        <Link href="/admin/collections/topics" className="block p-5 rounded-2xl border border-zinc-200 bg-white"><span>{topicsLabel}</span><strong className="block text-3xl font-serif">{stats.publishedTopics}</strong></Link>
         {/* Stat Metric Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           {/* Pending Applications Card */}
@@ -244,7 +251,7 @@ export function FounderDashboard({
                       <span className="font-medium text-zinc-700">
                         {sub.submittedBy || "Editor"}
                       </span>
-                      {sub.submittedAt && ` • ${new Date(sub.submittedAt).toLocaleDateString()}`}
+                      {sub.submittedAt && ` • ${new Date(sub.submittedAt).toLocaleDateString("en-GB", { timeZone: "UTC" })}`}
                     </p>
                   </div>
 

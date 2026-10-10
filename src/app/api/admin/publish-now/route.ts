@@ -1,5 +1,6 @@
+import { withContentLock } from "@/lib/content-lock";
 import { NextResponse } from "next/server";
-import { getPayload } from "payload";
+import { APIError, getPayload } from "payload";
 import configPromise from "@payload-config";
 import { headers } from "next/headers";
 import { invalidateCache } from "@/lib/data/cache-revalidate";
@@ -29,13 +30,23 @@ export async function POST(req: Request) {
       );
     }
 
-    if (!["articles", "videos"].includes(collection)) {
+    if (!["articles", "videos", "topics"].includes(collection)) {
       return NextResponse.json(
         { error: `Invalid collection for publishing: ${collection}` },
         { status: 400 },
       );
     }
 
+    return await withContentLock(payload, `${collection}:${id}`, async () => {
+    if (collection === "topics") {
+      const topic = await payload.findByID({ collection: "topics", id, locale: "all", user, overrideAccess: false });
+      if (topic.status === "published") return NextResponse.json({ success: true, doc: topic });
+      const names = topic.name as unknown as Record<string, string>;
+      const locale = (["en", "ps", "fa"] as const).find(value => names[value]?.trim());
+      if (!locale) return NextResponse.json({ error: "Topic name is required." }, { status: 400 });
+      const updated = await payload.update({ collection: "topics", id, locale, user, overrideAccess: false, data: { status: "published", reviewDecision: "approved", reviewedBy: user.id, reviewedAt: new Date().toISOString() } });
+      return NextResponse.json({ success: true, doc: updated, liveUrl: `/${locale}/topics/${updated.slug}` });
+    }
     const doc = await payload.findByID({
       collection: collection as AllowedCollection,
       id,
@@ -48,6 +59,8 @@ export async function POST(req: Request) {
         { status: 404 },
       );
     }
+
+    if (doc.status === "published") return NextResponse.json({ success: true, doc, liveUrl: `/${doc.language}/${collection === "articles" ? "read" : "watch"}/${doc.slug}` });
 
     // Server-side validation of required publishing fields
     const missing: string[] = [];
@@ -85,7 +98,7 @@ export async function POST(req: Request) {
       },
       data: {
         status: "published",
-        publishedAt: (doc as any).publishedAt || nowIso,
+        publishedAt: doc.status === "scheduled" ? nowIso : (doc as any).publishedAt || nowIso,
         reviewDecision: "approved",
         reviewNotes: "",
         reviewedBy: user.id,
@@ -119,9 +132,10 @@ export async function POST(req: Request) {
       liveUrl,
       doc: updated,
     });
+    });
   } catch (err: unknown) {
     console.error("Direct publish error:", err);
     const msg = err instanceof Error ? err.message : "Internal server error";
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json({ error: msg }, { status: err instanceof APIError ? err.status : 500 });
   }
 }
