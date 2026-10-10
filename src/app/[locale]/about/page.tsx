@@ -110,30 +110,30 @@ export default async function AboutPage({
 
       {/* 4. Five Editorial Principles */}
       <section className="space-y-8">
-        <h2 className="type-h2 border-b border-[var(--divider)] pb-4">
-          {t("principles_title")}
-        </h2>
+        <div className="border-b border-[var(--divider)] pb-4">
+          <h2 className="type-h2">{t("principles_title")}</h2>
+        </div>
 
-        <div className="space-y-6">
+        <div className="grid gap-6">
           {principles.map((pr, idx) => (
             <div
               key={idx}
-              className="py-6 border-b border-[var(--divider)] space-y-3"
+              className="p-6 sm:p-7 rounded-lg bg-[var(--surface)] border border-[var(--divider)] space-y-3 transition-colors hover:border-[var(--sage-400)]"
             >
-              <div className="flex items-center gap-2.5 text-[var(--sage-700)]">
+              <div className="flex items-center gap-3 text-[var(--sage-700)]">
                 <CheckCircle2 className="w-5 h-5 shrink-0" aria-hidden="true" />
-                <h3 className="type-h3">{pr.title}</h3>
+                <h3 className="type-h3 text-xl">{pr.title}</h3>
               </div>
-              <p className="type-body text-[var(--ink-muted)]">{pr.desc}</p>
+              <p className="type-body text-[var(--ink-muted)] text-base sm:text-lg leading-relaxed">{pr.desc}</p>
             </div>
           ))}
         </div>
       </section>
 
       {/* 5. Contact & Social Channels */}
-      <section className="p-8 rounded-md bg-[var(--surface)] border border-[var(--divider)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+      <section className="p-8 sm:p-10 rounded-lg bg-[var(--surface)] border border-[var(--divider)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 shadow-sm">
         <div className="space-y-1">
-          <h3 className="type-h3">{ui("about_cta")}</h3>
+          <h3 className="type-h3 text-xl">{ui("about_cta")}</h3>
           <p className="font-editorial-sans text-sm text-[var(--ink-muted)]">
             {ui("contact_intro")}
           </p>

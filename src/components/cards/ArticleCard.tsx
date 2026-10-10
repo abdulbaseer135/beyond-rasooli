@@ -50,24 +50,30 @@ export function ArticleCard({
               fill
               sizes={
                 isFeature
-                  ? "(min-width:1024px) 700px, 100vw"
-                  : "(min-width:1024px) 380px, (min-width:480px) 50vw, 100vw"
+                  ? "(min-width:1440px) 760px, (min-width:1024px) 55vw, 100vw"
+                  : "(min-width:1440px) 440px, (min-width:1024px) 30vw, (min-width:640px) 45vw, 100vw"
               }
               className="object-cover"
             />
           </div>
         )}
         <div className="article-card-copy">
-          <p className="type-meta text-[var(--sage-700)]">{topicName}</p>
+          <p className="type-meta text-xs uppercase tracking-wider font-semibold text-[var(--sage-700)]">
+            {topicName}
+          </p>
           {isFeature ? (
             <h2 className="type-h2">{title}</h2>
           ) : (
-            <h3 className="type-h3">{title}</h3>
+            <h3 className="type-h3 line-clamp-2">{title}</h3>
           )}
-          <p className={isFeature ? "type-standfirst" : "type-ui"}>{summary}</p>
-          <div className="card-meta type-meta">
-            {authorName && <bdi>{authorName}</bdi>}
+          <p className={`${isFeature ? "type-standfirst" : "type-ui"} line-clamp-3 text-[var(--ink-muted)]`}>
+            {summary}
+          </p>
+          <div className="card-meta type-meta text-xs">
+            {authorName && <bdi className="font-medium text-[var(--ink)]">{authorName}</bdi>}
+            {authorName && <span>•</span>}
             <span>{publishedDate}</span>
+            <span>•</span>
             <span>{t("read_time", { minutes: readingTimeMinutes })}</span>
           </div>
         </div>
