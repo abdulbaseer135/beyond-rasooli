@@ -1,6 +1,6 @@
 "use client";
 import Image from "next/image";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/routing";
 import { Play } from "lucide-react";
 export interface VideoCardProps {
@@ -13,6 +13,9 @@ export interface VideoCardProps {
   posterUrl?: string;
   posterAlt?: string;
   className?: string;
+  headingLevel?: 2 | 3;
+  showMetadata?: boolean;
+  showDuration?: boolean;
 }
 export function VideoCard({
   slug,
@@ -24,11 +27,16 @@ export function VideoCard({
   posterUrl,
   posterAlt = "",
   className = "",
+  headingLevel = 3,
+  showMetadata = true,
+  showDuration = true,
 }: VideoCardProps) {
   const t = useTranslations("ui");
+  const uiLocale = useLocale();
   const audio = spokenLanguage || language;
+  const Heading = headingLevel === 2 ? "h2" : "h3";
   return (
-    <article className={`video-card ${className}`}>
+    <article className={`video-card ${className}`} lang={language === "fa" ? "fa-AF" : language} dir={language === "en" ? "ltr" : "rtl"}>
       <Link href={`/watch/${slug}`} className="editorial-card-link">
         <div className="video-card-poster">
           {posterUrl && (
@@ -36,24 +44,24 @@ export function VideoCard({
               src={posterUrl}
               alt={posterAlt}
               fill
-              sizes="(min-width:1280px) 340px, (min-width:768px) 33vw, (min-width:480px) 50vw, 100vw"
-              className="object-cover"
+              sizes="(min-width:1280px) 262px, (min-width:1024px) 23vw, (min-width:768px) 30vw, 45vw"
+              className="object-contain"
             />
           )}
           <span className="video-play-cue" aria-hidden="true">
             <Play strokeWidth={1.5} className="w-5 h-5 translate-x-0.5" />
           </span>
-          {duration && (
+          {showDuration && duration && (
             <bdi className="video-duration type-meta">{duration}</bdi>
           )}
         </div>
         <div className="video-card-copy">
-          <div className="card-meta type-meta text-xs uppercase tracking-wider font-medium text-[var(--sage-700)]">
+          {showMetadata && <div className="card-meta type-meta text-xs uppercase tracking-wider font-medium text-[var(--sage-700)]">
             <span>{topicName}</span>
-            <span>•</span>
-            <span className="text-[var(--ink-muted)]">{t(`language_${audio}`)}</span>
-          </div>
-          <h3 className="type-h3 line-clamp-2 text-lg sm:text-xl">{title}</h3>
+            <span aria-hidden="true">•</span>
+            <span className="font-editorial-sans text-[var(--ink-muted)]" lang={uiLocale === "fa" ? "fa-AF" : uiLocale} dir={uiLocale === "en" ? "ltr" : "rtl"}>{t(`language_${audio}`)}</span>
+          </div>}
+          <Heading className="type-h3">{title}</Heading>
         </div>
       </Link>
     </article>

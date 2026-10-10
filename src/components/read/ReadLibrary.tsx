@@ -7,7 +7,7 @@ export function ReadLibrary({
   locale: string;
 }) {
   return (
-    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
+    <div className="article-grid">
       {articles.map((a) => (
         <ArticleCard key={a.id} {...a} />
       ))}

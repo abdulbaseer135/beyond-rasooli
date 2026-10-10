@@ -86,6 +86,12 @@ export function Header({ brand }: { brand: string }) {
           </div>
         </div>
       </header>
+      <noscript>
+        <div className="site-container no-js-navigation">
+          {nav}
+          <Link href="/search" className="text-link">{t("search")}</Link>
+        </div>
+      </noscript>
       <Dialog
         open={menu}
         onClose={() => setMenu(false)}

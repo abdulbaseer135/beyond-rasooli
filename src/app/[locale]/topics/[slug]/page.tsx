@@ -6,6 +6,7 @@ import type { Locale } from "@/i18n/routing";
 import { getLibrary, getTopics } from "@/lib/data/cms";
 import { ArticleCard } from "@/components/cards/ArticleCard";
 import { VideoCard } from "@/components/cards/VideoCard";
+import Image from "next/image";
 export async function generateMetadata({
   params,
 }: {
@@ -43,9 +44,12 @@ export default async function TopicPage({
   const videos = library.videos.filter((v) => v.topicSlug === slug);
   return (
     <div className="site-container page-start space-y-12">
-      <header className="page-heading">
+      <header className={`page-heading ${topic.coverImageUrl ? "topic-intro" : ""}`}>
+        <div className="space-y-4">
         <h1 className="type-h1">{topic.name[locale]}</h1>
         <p className="type-ui">{topic.description[locale]}</p>
+        </div>
+        {topic.coverImageUrl && <div className="topic-intro-image"><Image src={topic.coverImageUrl} alt="" fill sizes="(min-width:1024px) 480px, 100vw" className="object-cover" /></div>}
       </header>
       {articles[0] && <ArticleCard {...articles[0]} isFeature />}
       {!!videos.length && (
@@ -53,7 +57,7 @@ export default async function TopicPage({
           <h2 className="type-h2 mb-6">
             {t("videos_heading", { topic: topic.name[locale] })}
           </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
+          <div className="video-grid">
             {videos.map((v) => (
               <VideoCard key={v.id} {...v} />
             ))}
@@ -65,7 +69,7 @@ export default async function TopicPage({
           <h2 className="type-h2 mb-6">
             {t("articles_heading", { topic: topic.name[locale] })}
           </h2>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="article-grid">
             {articles.slice(1).map((a) => (
               <ArticleCard key={a.id} {...a} />
             ))}

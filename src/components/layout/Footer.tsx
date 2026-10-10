@@ -47,6 +47,8 @@ export async function Footer({ locale }: { locale: Locale }) {
           <p className="type-standfirst">{settings.tagline || t("tagline")}</p>
           <p className="type-ui">{t("description")}</p>
         </div>
+        <div>
+        <h2 className="footer-group-title">{t("nav_group_explore")}</h2>
         <nav aria-label={t("nav_group_explore")} className="footer-links">
           {links.map(([href, label]) => (
             <Link key={href} href={href}>
@@ -54,6 +56,9 @@ export async function Footer({ locale }: { locale: Locale }) {
             </Link>
           ))}
         </nav>
+        </div>
+        <div>
+        <h2 className="footer-group-title">{t("nav_group_editorial")}</h2>
         <nav aria-label={t("nav_group_editorial")} className="footer-links">
           {Object.entries(settings.socialLinks || {})
             .filter(([, url]) => url && /^https?:/.test(url))
@@ -69,6 +74,7 @@ export async function Footer({ locale }: { locale: Locale }) {
               </a>
             ))}
         </nav>
+        </div>
         {settings.newsletterEnabled && privacy && <NewsletterForm />}
         <div className="footer-bottom type-meta">
           <p>{t("copyright", { year: new Date().getFullYear() })}</p>

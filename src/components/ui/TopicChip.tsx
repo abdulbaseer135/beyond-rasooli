@@ -18,7 +18,7 @@ export function TopicChip({
   className = "",
 }: TopicChipProps) {
   const baseClasses =
-    "inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-base font-medium transition-all duration-150 cursor-pointer select-none whitespace-nowrap min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sage-700)] focus-visible:ring-offset-1";
+    "topic-chip inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-base font-medium transition-colors duration-150 cursor-pointer select-none min-h-[44px]";
 
   const stateClasses = isSelected
     ? "bg-[var(--sage-600)] text-[var(--bg)] font-semibold"
@@ -57,7 +57,7 @@ export function TopicChipBar({
   return (
     <div className={`relative w-full ${className}`}>
       {/* Scrollable container with edge fades */}
-      <div className="flex items-center gap-2.5 overflow-x-auto py-2 px-1 no-scrollbar scroll-smooth">
+      <div className="topic-chip-bar flex items-center gap-2.5 py-2 px-1">
         {children}
       </div>
     </div>

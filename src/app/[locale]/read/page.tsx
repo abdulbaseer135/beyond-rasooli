@@ -55,14 +55,14 @@ export default async function LibraryPage({
   const limit = pageLimit(query);
   const visible = filtered.slice(0, limit);
   return (
-    <div className="site-container page-start space-y-10">
-      <header className="page-heading">
-        <h1 className="type-h1">{t("title")}</h1>
-        <p className="type-ui">{t("intro")}</p>
+    <div className="site-container read-page">
+      <header className="read-intro">
+        <h1>{t("intro")}</h1>
       </header>
       <DiscoveryFilters
         key={JSON.stringify(query)}
         kind="read"
+        topicsOnly
         locale={locale}
         topics={library.topics}
         params={{ language: locale, ...query }}
@@ -71,16 +71,13 @@ export default async function LibraryPage({
         {ui("stories", { count: filtered.length })}
       </p>
       {visible.length ? (
-        <div className="space-y-10">
-          {visible[0] && <ArticleCard {...visible[0]} isFeature />}
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {visible.slice(1).map((a) => (
-              <ArticleCard key={a.id} {...a} />
-            ))}
-          </div>
+        <div className="article-grid home-article-preview">
+          {visible.map((a) => (
+            <ArticleCard key={a.id} {...a} compact headingLevel={2} />
+          ))}
         </div>
       ) : (
-        <p className="type-body">{ui("no_results")}</p>
+        <div className="empty-state"><p className="type-body">{ui("no_results")}</p></div>
       )}
       {filtered.length > limit && limit < 120 && (
         <a

@@ -13,6 +13,7 @@ import {
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import "@/app/globals.css";
+import "@/app/public-ui.css";
 
 interface RootLayoutProps {
   children: React.ReactNode;
@@ -78,7 +79,7 @@ export default async function LocaleLayout({
     <html
       lang={meta.htmlLang}
       dir={meta.dir}
-      className={fontVariables}
+      className={`public-site ${fontVariables}`}
       data-scroll-behavior="smooth"
       suppressHydrationWarning
     >

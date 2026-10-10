@@ -120,12 +120,6 @@ export default async function VideoDetail({
               />
             </div>
 
-            {v.description && (
-              <p className="type-body whitespace-pre-line text-[var(--ink-muted)]">
-                {v.description}
-              </p>
-            )}
-
             {article && (
               <div className="pt-2">
                 <GoDeeperCard
@@ -135,6 +129,12 @@ export default async function VideoDetail({
                   thumbnailUrl={article.coverImageUrl}
                 />
               </div>
+            )}
+
+            {v.description && (
+              <p className="type-body whitespace-pre-line text-[var(--ink-muted)]">
+                {v.description}
+              </p>
             )}
 
             <div className="pt-2">
@@ -238,7 +238,7 @@ export default async function VideoDetail({
       {!!related.length && (
         <section className="pt-12 border-t border-[var(--divider)]">
           <h2 className="type-h2 mb-6">{t("keep_exploring")}</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
+          <div className="video-grid">
             {related.map((d) => (
               <VideoCard key={d.id} {...d} />
             ))}

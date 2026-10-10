@@ -149,13 +149,13 @@ export default async function ArticleDetailPage({
 
       {/* 3. Main Reading Body (680px column measure) */}
       {article.coverImageUrl && (
-        <figure className="article-measure mx-auto">
+        <figure className="article-cover mx-auto">
           <Image
             src={article.coverImageUrl}
             alt={article.coverAlt}
             width={1200}
             height={800}
-            sizes="(max-width:768px) calc(100vw - 40px), 680px"
+            sizes="(max-width:1024px) calc(100vw - 40px), 960px"
             className="w-full h-auto"
           />
           <figcaption className="type-meta">{article.coverCaption}</figcaption>

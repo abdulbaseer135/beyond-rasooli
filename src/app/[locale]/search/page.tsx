@@ -61,7 +61,7 @@ export default async function SearchPage({
               <h2 className="type-h2 mb-6">
                 {t("videos_group", { count: results.videos.length })}
               </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
+              <div className="video-grid">
                 {results.videos.slice(0, 40).map((v) => (
                   <VideoCard key={v.id} {...v} />
                 ))}
@@ -73,7 +73,7 @@ export default async function SearchPage({
               <h2 className="type-h2 mb-6">
                 {t("articles_group", { count: results.articles.length })}
               </h2>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
+              <div className="article-grid">
                 {results.articles.slice(0, 40).map((a) => (
                   <ArticleCard key={a.id} {...a} />
                 ))}

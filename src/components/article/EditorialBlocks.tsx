@@ -86,8 +86,8 @@ export function SourcesList({ sources, title }: SourcesListProps) {
   const t = useTranslations("ui");
   if (!sources.length) return null;
   return (
-    <section className="article-measure sources-list">
-      <h2 className="type-h2">{title || t("sources")}</h2>
+    <details className="article-measure sources-list" open>
+      <summary><h2 className="type-h2">{title || t("sources")}</h2></summary>
       <ol>
         {sources.map((s, i) => {
           const href = sourceURL(s.urlDoi);
@@ -113,7 +113,7 @@ export function SourcesList({ sources, title }: SourcesListProps) {
           );
         })}
       </ol>
-    </section>
+    </details>
   );
 }
 export interface AuthorBoxProps {

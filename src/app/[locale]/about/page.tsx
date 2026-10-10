@@ -5,8 +5,7 @@ import { RichText } from "@/components/article/RichText";
 import type { Metadata } from "next";
 import { setRequestLocale } from "next-intl/server";
 import { getTranslations } from "next-intl/server";
-import { Link } from "@/i18n/routing";
-import { CheckCircle2 } from "lucide-react";
+import { ContactChannels } from "@/components/ui/ContactChannels";
 
 export async function generateMetadata({
   params,
@@ -34,18 +33,15 @@ export default async function AboutPage({
   const t = await getTranslations({ locale, namespace: "about" });
 
   const ui = await getTranslations({ locale, namespace: "ui" });
-  const nav = await getTranslations({ locale, namespace: "nav" });
   const page = await getPage("about", locale);
   if (page)
     return (
-      <div className="site-container page-start content-narrow space-y-10">
-        <header className="page-heading">
+      <div className="site-container page-start about-page">
+        <header className="about-hero">
           <h1 className="type-h1">{page.title}</h1>
         </header>
-        <RichText locale={locale} data={page.body} />
-        <Link href="/contact" className="button button-primary">
-          {ui("about_cta")}
-        </Link>
+        <div className="about-cms-body"><RichText locale={locale} data={page.body} /></div>
+        <ContactChannels locale={locale} />
       </div>
     );
 
@@ -73,20 +69,23 @@ export default async function AboutPage({
   ];
 
   return (
-    <div className="site-container page-start content-narrow space-y-12 text-start">
+    <div className="site-container page-start about-page text-start">
       {/* 1. Header & Founder Introduction */}
-      <header className="space-y-4 border-b border-[var(--divider)] pb-8">
-        <span className="text-xs uppercase tracking-widest font-semibold px-2.5 py-1 rounded bg-[var(--sage-100)] text-[var(--sage-700)]">
+      <header className="about-hero">
+        <div className="about-hero-heading">
+        <span className="about-eyebrow">
           {t("mission_title")}
         </span>
         <h1 className="type-h1">{t("title")}</h1>
-        <p className="font-editorial-serif text-xl sm:text-2xl text-[var(--ink-muted)] italic">
+        </div>
+        <p className="about-tagline">
           &ldquo;{t("tagline")}&rdquo;
         </p>
       </header>
 
       {/* 2. Founder Bio Card (No-Face Presentation Rule) */}
-      <section className="p-8 sm:p-10 rounded-md bg-[var(--surface)] border border-[var(--divider)] space-y-6">
+      <div className="about-introduction">
+      <section className="founder-panel">
         <div className="space-y-1">
           <h2 className="type-h2">{t("founder_name")}</h2>
           <p className="text-xs font-semibold uppercase tracking-wider text-[var(--sage-700)]">
@@ -97,31 +96,32 @@ export default async function AboutPage({
         <p className="type-body">{t("founder_bio")}</p>
 
         {/* PRD & Brief: No-Face Presentation Note */}
-        <div className="p-4 rounded bg-[var(--surface-2)]/80 border-s-4 border-[var(--sage-600)] text-xs text-[var(--ink-muted)] leading-relaxed">
+        <div className="founder-note">
           {t("no_face_note")}
         </div>
       </section>
 
       {/* 3. Our Mission */}
-      <section className="space-y-4">
+      <section className="about-mission">
         <h2 className="type-h2">{t("mission_title")}</h2>
         <p className="type-body">{t("mission_text")}</p>
       </section>
+      </div>
 
       {/* 4. Five Editorial Principles */}
-      <section className="space-y-8">
-        <div className="border-b border-[var(--divider)] pb-4">
+      <section className="about-principles">
+        <div className="about-section-heading">
           <h2 className="type-h2">{t("principles_title")}</h2>
         </div>
 
-        <div className="grid gap-6">
+        <div className="principles-grid">
           {principles.map((pr, idx) => (
             <div
               key={idx}
-              className="p-6 sm:p-7 rounded-lg bg-[var(--surface)] border border-[var(--divider)] space-y-3 transition-colors hover:border-[var(--sage-400)]"
+              className="principle"
             >
-              <div className="flex items-center gap-3 text-[var(--sage-700)]">
-                <CheckCircle2 className="w-5 h-5 shrink-0" aria-hidden="true" />
+              <div className="principle-title">
+                <span className="principle-number" aria-hidden="true">{new Intl.NumberFormat(locale === "fa" ? "fa-AF" : locale, { minimumIntegerDigits: 2 }).format(idx + 1)}</span>
                 <h3 className="type-h3 text-xl">{pr.title}</h3>
               </div>
               <p className="type-body text-[var(--ink-muted)] text-base sm:text-lg leading-relaxed">{pr.desc}</p>
@@ -131,16 +131,14 @@ export default async function AboutPage({
       </section>
 
       {/* 5. Contact & Social Channels */}
-      <section className="p-8 sm:p-10 rounded-lg bg-[var(--surface)] border border-[var(--divider)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 shadow-sm">
+      <section className="about-contact">
         <div className="space-y-1">
-          <h3 className="type-h3 text-xl">{ui("about_cta")}</h3>
+          <h2 className="type-h3 text-xl">{ui("about_cta")}</h2>
           <p className="font-editorial-sans text-sm text-[var(--ink-muted)]">
             {ui("contact_intro")}
           </p>
         </div>
-        <Link href="/contact" className="button button-primary">
-          {nav("contact")}
-        </Link>
+        <ContactChannels locale={locale} />
       </section>
     </div>
   );

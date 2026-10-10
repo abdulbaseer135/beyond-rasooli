@@ -1,7 +1,8 @@
 import { pageMetadata } from "@/lib/seo/metadata";
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { Link, type Locale } from "@/i18n/routing";
+import { type Locale } from "@/i18n/routing";
+import { TopicCard } from "@/components/cards/TopicCard";
 import { getTopics } from "@/lib/data/cms";
 export async function generateMetadata({
   params,
@@ -36,19 +37,9 @@ export default async function TopicsPage({
           {t("empty")}
         </p>
       )}
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <div className="topic-grid home-topic-preview">
         {topics.map((topic) => (
-          <Link
-            key={topic.id}
-            href={`/topics/${topic.slug}`}
-            className="topic-destination"
-          >
-            <h2 className="type-h3">{topic.name[locale]}</h2>
-            <p className="type-ui">{topic.description[locale]}</p>
-            <span className="text-link">
-              {t("view_topic", { topic: topic.name[locale] })}
-            </span>
-          </Link>
+          <TopicCard key={topic.id} topic={topic} locale={locale} headingLevel={2} compact />
         ))}
       </div>
     </div>

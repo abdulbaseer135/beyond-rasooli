@@ -6,6 +6,7 @@ import { Hero } from "@/components/layout/Hero";
 import { HomeFeed } from "@/components/home/HomeFeed";
 import { ArticleCard } from "@/components/cards/ArticleCard";
 import { CollectionCard } from "@/components/cards/CollectionCard";
+import { TopicCard } from "@/components/cards/TopicCard";
 import { getLibrary, getSettings } from "@/lib/data/cms";
 export async function generateMetadata({
   params,
@@ -28,6 +29,8 @@ export default async function HomePage({
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: "home" });
+  const ui = await getTranslations({ locale, namespace: "ui" });
+  const nav = await getTranslations({ locale, namespace: "nav" });
   const library = await getLibrary(locale);
   const { articles, videos, topics, collections, settings } = library;
   const pinned = videos
@@ -65,10 +68,9 @@ export default async function HomePage({
                 {t("see_all_articles")}
               </Link>
             </div>
-            <ArticleCard {...articles[0]} isFeature />
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
-              {articles.slice(1, 4).map((a) => (
-                <ArticleCard key={a.id} {...a} />
+            <div className="article-grid home-article-preview">
+              {articles.slice(0, 3).map((a) => (
+                <ArticleCard key={a.id} {...a} compact />
               ))}
             </div>
           </section>
@@ -97,17 +99,13 @@ export default async function HomePage({
           <section>
             <div className="section-heading">
               <h2 className="type-h2">{t("topic_pillars_title")}</h2>
+              <Link href="/topics" className="text-link">
+                {ui("all")} {nav("topics")}
+              </Link>
             </div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">
-              {topics.map((topic) => (
-                <Link
-                  key={topic.id}
-                  href={`/topics/${topic.slug}`}
-                  className="topic-destination"
-                >
-                  <h3 className="type-h3">{topic.name[locale]}</h3>
-                  <p className="type-ui">{topic.description[locale]}</p>
-                </Link>
+            <div className="topic-grid home-topic-preview">
+              {topics.slice(0, 6).map((topic) => (
+                <TopicCard key={topic.id} topic={topic} locale={locale} compact />
               ))}
             </div>
           </section>

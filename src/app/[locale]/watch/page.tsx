@@ -5,7 +5,9 @@ import { setRequestLocale, getTranslations } from "next-intl/server";
 import type { Locale } from "@/i18n/routing";
 import { getLibrary } from "@/lib/data/cms";
 import { VideoCard } from "@/components/cards/VideoCard";
+import { Link } from "@/i18n/routing";
 import { DiscoveryFilters } from "@/components/search/DiscoveryFilters";
+import watchIntro from "@/messages/public-watch.json";
 import {
   filterItems,
   pageLimit,
@@ -43,10 +45,9 @@ export default async function LibraryPage({
   const limit = pageLimit(query);
   const visible = filtered.slice(0, limit);
   return (
-    <div className="site-container page-start space-y-10">
-      <header className="page-heading">
-        <h1 className="type-h1">{t("title")}</h1>
-        <p className="type-ui">{t("intro")}</p>
+    <div className="site-container page-start watch-page">
+      <header className="watch-intro">
+        <h1>{t.has("library_intro") ? t("library_intro") : watchIntro[locale]}</h1>
       </header>
       {!!library.collections.length && (
         <section aria-label={ui("collections")}>
@@ -76,7 +77,7 @@ export default async function LibraryPage({
         {ui("stories", { count: filtered.length })}
       </p>
       {visible.length ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+        <div className="video-grid">
           {visible.map((v) => (
             <VideoCard
               key={v.id}
@@ -88,11 +89,17 @@ export default async function LibraryPage({
               spokenLanguage={v.spokenLanguage}
               posterUrl={v.posterUrl}
               posterAlt={v.posterAlt}
+              headingLevel={2}
+              showMetadata={false}
+              showDuration={false}
             />
           ))}
         </div>
       ) : (
-        <p className="type-body">{ui("no_results")}</p>
+        <div className="empty-state">
+          <p className="type-body">{ui("no_results")}</p>
+          <Link href="/read" className="text-link">{t("explore_read")}</Link>
+        </div>
       )}
       {filtered.length > limit && limit < 120 && (
         <a

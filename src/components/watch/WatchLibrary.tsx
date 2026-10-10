@@ -7,7 +7,7 @@ export function WatchLibrary({
   locale: string;
 }) {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
+    <div className="video-grid">
       {initialVideos.map((v) => (
         <VideoCard key={v.id} {...v} />
       ))}

@@ -12,14 +12,17 @@ export function DiscoveryFilters({
   locale,
   topics,
   params,
+  topicsOnly = kind === "watch",
 }: {
   kind: "watch" | "read";
   locale: Locale;
   topics: PublicTopic[];
   params: FilterParams;
+  topicsOnly?: boolean;
 }) {
   const t = useTranslations("ui");
   const read = useTranslations("read");
+  const nav = useTranslations("nav");
   const router = useRouter();
   const searchParams = useSearchParams();
   const action = `/${locale}/${kind}`;
@@ -27,11 +30,16 @@ export function DiscoveryFilters({
   const currentTopic = value(params, "topic", "all");
   const currentLanguage = value(params, "language", "all");
   const currentFormat = value(params, "format", "all");
-  const currentSort = value(params, "sort", "latest");
   const currentQuery = value(params, "q", "");
 
-  const updateParams = (updates: Record<string, string>) => {
+  const hrefFor = (updates: Record<string, string>) => {
     const sp = new URLSearchParams(searchParams?.toString() || "");
+    if (topicsOnly) {
+      sp.delete("language");
+      sp.delete("sort");
+      sp.delete("format");
+      sp.delete("q");
+    }
     for (const [k, v] of Object.entries(updates)) {
       if (!v || v === "all" || (k === "sort" && v === "latest") || (k === "q" && !v.trim())) {
         sp.delete(k);
@@ -41,32 +49,46 @@ export function DiscoveryFilters({
     }
     sp.delete("limit"); // reset pagination on filter change
     const qs = sp.toString();
-    router.push(qs ? `${action}?${qs}` : action);
+    return qs ? `${action}?${qs}` : action;
+  };
+  const updateParams = (updates: Record<string, string>) => router.push(hrefFor(updates));
+  const selectTopic = (event: React.MouseEvent<HTMLAnchorElement>, topic: string) => {
+    if (event.button === 0 && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
+      event.preventDefault();
+      updateParams({ topic });
+    }
   };
 
   return (
-    <div className="editorial-filters space-y-4 py-2 border-b border-[var(--divider)]">
+    <form method="get" action={action} className={`editorial-filters space-y-4 ${topicsOnly ? "watch-filters" : ""}`} onSubmit={(event) => {
+      event.preventDefault();
+      const data = new FormData(event.currentTarget);
+      updateParams(Object.fromEntries([...data].map(([key, entry]) => [key, String(entry)])));
+    }}>
+      {currentTopic !== "all" && <input type="hidden" name="topic" value={currentTopic} />}
       {/* 1. Topic Chips Row (Scrollable / Wrapping) */}
       <div className="topic-chips-wrapper">
-        <div className="topic-chips-scroll flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-          <button
-            type="button"
-            onClick={() => updateParams({ topic: "all" })}
+        <div className="topic-chips-scroll" tabIndex={topicsOnly ? 0 : undefined} role={topicsOnly ? "region" : undefined} aria-label={topicsOnly ? nav("topics") : undefined}>
+          <a
+            href={hrefFor({ topic: "all" })}
+            aria-current={currentTopic === "all" ? "true" : undefined}
+            onClick={(event) => selectTopic(event, "all")}
             className={`topic-chip px-3.5 py-1.5 text-xs sm:text-sm rounded-full whitespace-nowrap transition-colors min-h-[36px] ${
               currentTopic === "all"
                 ? "bg-[var(--sage-700)] text-[var(--bg)] font-medium"
                 : "bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface-2)]"
             }`}
           >
-            {read("format_all")}
-          </button>
+            {t("all")}
+          </a>
           {topics.map((topic) => {
             const isSelected = currentTopic === topic.slug;
             return (
-              <button
+              <a
                 key={topic.id}
-                type="button"
-                onClick={() => updateParams({ topic: topic.slug })}
+                href={hrefFor({ topic: topic.slug })}
+                aria-current={isSelected ? "true" : undefined}
+                onClick={(event) => selectTopic(event, topic.slug)}
                 className={`topic-chip px-3.5 py-1.5 text-xs sm:text-sm rounded-full whitespace-nowrap transition-colors min-h-[36px] ${
                   isSelected
                     ? "bg-[var(--sage-700)] text-[var(--bg)] font-medium"
@@ -74,27 +96,27 @@ export function DiscoveryFilters({
                 }`}
               >
                 {topic.name[locale]}
-              </button>
+              </a>
             );
           })}
         </div>
       </div>
 
       {/* 2. Secondary Restrained Controls Row */}
-      <div className="secondary-filters-row flex flex-wrap items-center justify-between gap-3 pt-1 text-sm">
-        <div className="flex flex-wrap items-center gap-3">
+      {kind === "read" && !topicsOnly && <div className="secondary-filters-row">
+        {kind === "read" && <div className="filter-fields">
           {/* Language filter */}
-          <div className="inline-flex items-center gap-1.5 text-[var(--ink-muted)]">
-            <label htmlFor="filter-language" className="text-xs uppercase tracking-wide">
-              {t(kind === "watch" ? "video_language" : "language")}:
+          <div className="filter-field">
+            <label htmlFor="filter-language">
+              {t("language")}:
             </label>
             <select
               id="filter-language"
+              name="language"
               value={currentLanguage}
               onChange={(e) => updateParams({ language: e.target.value })}
-              className="bg-transparent text-[var(--ink)] border-b border-[var(--divider)] py-1 pe-6 text-sm focus:border-[var(--sage-700)] focus:outline-none cursor-pointer"
             >
-              <option value="all">{read("format_all")}</option>
+              <option value="all">{t("all")}</option>
               {(["ps", "fa", "en"] as const).map((l) => (
                 <option key={l} value={l}>
                   {t(`language_${l}`)}
@@ -105,15 +127,15 @@ export function DiscoveryFilters({
 
           {/* Read format filter */}
           {kind === "read" && (
-            <div className="inline-flex items-center gap-1.5 text-[var(--ink-muted)]">
-              <label htmlFor="filter-format" className="text-xs uppercase tracking-wide">
+            <div className="filter-field">
+              <label htmlFor="filter-format">
                 {t("format")}:
               </label>
               <select
                 id="filter-format"
+                name="format"
                 value={currentFormat}
                 onChange={(e) => updateParams({ format: e.target.value })}
-                className="bg-transparent text-[var(--ink)] border-b border-[var(--divider)] py-1 pe-6 text-sm focus:border-[var(--sage-700)] focus:outline-none cursor-pointer"
               >
                 <option value="all">{read("format_all")}</option>
                 {["article", "explainer", "mystery"].map((f) => (
@@ -125,54 +147,31 @@ export function DiscoveryFilters({
             </div>
           )}
 
-          {/* Watch sort filter */}
-          {kind === "watch" && (
-            <div className="inline-flex items-center gap-1.5 text-[var(--ink-muted)]">
-              <label htmlFor="filter-sort" className="text-xs uppercase tracking-wide">
-                {t("sort")}:
-              </label>
-              <select
-                id="filter-sort"
-                value={currentSort}
-                onChange={(e) => updateParams({ sort: e.target.value })}
-                className="bg-transparent text-[var(--ink)] border-b border-[var(--divider)] py-1 pe-6 text-sm focus:border-[var(--sage-700)] focus:outline-none cursor-pointer"
-              >
-                <option value="latest">{t("latest")}</option>
-                <option value="featured">{t("featured")}</option>
-              </select>
-            </div>
-          )}
-        </div>
+        </div>}
 
         {/* Read text search */}
-        {kind === "read" && (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              const input = e.currentTarget.elements.namedItem("q") as HTMLInputElement;
-              updateParams({ q: input.value });
-            }}
-            className="flex items-center gap-2"
-          >
-            <div className="relative">
+        {(
+          <div className="filter-search">
+            <label htmlFor="filter-query">{t("search")}</label>
+            <div className="filter-search-control">
               <input
+                id="filter-query"
                 name="q"
                 type="search"
                 defaultValue={currentQuery}
                 placeholder={t("search")}
-                className="py-1 ps-2 pe-7 text-xs sm:text-sm bg-[var(--surface)] border border-[var(--divider)] rounded focus:outline-none focus:border-[var(--sage-700)] w-36 sm:w-44"
               />
               <button
                 type="submit"
-                className="absolute end-1.5 top-1/2 -translate-y-1/2 text-[var(--ink-muted)] hover:text-[var(--ink)]"
+                className="icon-button"
                 aria-label={t("search")}
               >
-                <Search className="w-3.5 h-3.5" />
+                <Search size={20} strokeWidth={1.5} aria-hidden="true" />
               </button>
             </div>
-          </form>
+          </div>
         )}
-      </div>
-    </div>
+      </div>}
+    </form>
   );
 }
