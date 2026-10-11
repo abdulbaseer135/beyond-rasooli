@@ -7,6 +7,7 @@ import { publicContentRead, contentState, contentIdentity } from "./shared/publi
 import type { CollectionConfig } from "payload";
 import { sourceFields } from "./shared/sources";
 import { editorialContentCreateAccess, editorialContentUpdateAccess } from "./shared/auth-roles";
+import { populateVideoLinkMetadata } from "./shared/video-metadata";
 
 export const Videos: CollectionConfig = {
   slug: "videos",
@@ -35,7 +36,7 @@ export const Videos: CollectionConfig = {
   },
   hooks: {
     beforeValidate: [contentIdentity],
-    beforeChange: [contentState],
+    beforeChange: [populateVideoLinkMetadata, contentState],
     afterChange: [contentChanged],
     beforeDelete: [archiveBeforeDelete],
     afterDelete: [
@@ -148,17 +149,15 @@ export const Videos: CollectionConfig = {
               relationTo: "media",
               label: "Thumbnail / Poster",
               admin: {
-                description: "Custom poster image. If left blank, YouTube thumbnail is used automatically.",
+                condition: () => false,
               },
             },
             {
               name: "duration",
               type: "text",
               label: "Duration",
-              defaultValue: "0:45",
               admin: {
-                description:
-                  "Formatted duration mm:ss (e.g. 0:48). Total seconds are calculated automatically.",
+                condition: () => false,
               },
             },
             {
@@ -178,7 +177,9 @@ export const Videos: CollectionConfig = {
               label: "Author",
               type: "relationship",
               relationTo: "users",
-              admin: { readOnly: true },
+              defaultValue: ({ user }: { user?: { id?: string | number } | null }) =>
+                user?.id,
+              admin: { condition: () => false },
               access: { update: ({ req: { user } }) => user?.role === "admin" },
             },
             {
@@ -319,8 +320,7 @@ export const Videos: CollectionConfig = {
               relationTo: "users",
               label: "Submitted By (Editor)",
               admin: {
-                readOnly: true,
-                description: "Editor who submitted this content for approval",
+                condition: () => false,
               },
               access: {
                 update: ({ req: { user } }) => user?.role === "admin",
@@ -340,6 +340,9 @@ export const Videos: CollectionConfig = {
               type: "select",
               defaultValue: "none",
               label: "Translation Review Status",
+              admin: {
+                condition: () => false,
+              },
               options: [
                 { label: "None (Original Content)", value: "none" },
                 {
@@ -364,12 +367,14 @@ export const Videos: CollectionConfig = {
               type: "upload",
               relationTo: "media",
               label: "Social Share / OpenGraph Image (defaults to video poster)",
+              admin: {
+                condition: () => false,
+              },
             },
             // Technical internal fields (preserved on database model, hidden from routine editing)
             {
               name: "durationSeconds",
               type: "number",
-              defaultValue: 45,
               admin: {
                 condition: () => false,
               },

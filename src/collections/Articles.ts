@@ -122,11 +122,9 @@ export const Articles: CollectionConfig = {
               label: "Author",
               type: "relationship",
               relationTo: "users",
-              admin: {
-                readOnly: true,
-                description:
-                  "Author byline. Automatically populated with the authenticated contributor's account.",
-              },
+              defaultValue: ({ user }: { user?: { id?: string | number } | null }) =>
+                user?.id,
+              admin: { condition: () => false },
               access: {
                 update: ({ req: { user } }) => user?.role === "admin",
               },
@@ -327,8 +325,7 @@ export const Articles: CollectionConfig = {
               relationTo: "users",
               label: "Submitted By (Editor)",
               admin: {
-                readOnly: true,
-                description: "Editor who submitted this content for approval",
+                condition: () => false,
               },
               access: {
                 update: ({ req: { user } }) => user?.role === "admin",

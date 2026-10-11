@@ -241,6 +241,24 @@ textarea {
   color: #5a5a52;
 }
 
+.br-youtube-metadata-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-inline-size: 360px;
+  padding: 8px;
+  border: 1px solid var(--theme-elevation-150);
+  border-radius: 6px;
+  background: var(--theme-elevation-50);
+}
+
+.br-youtube-metadata-preview img {
+  inline-size: 112px;
+  block-size: 63px;
+  border-radius: 3px;
+  object-fit: cover;
+}
+
 .br-translation-tools-card {
   border: 1px solid var(--theme-elevation-150);
   background: var(--theme-elevation-50);

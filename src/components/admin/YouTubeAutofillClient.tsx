@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useForm, useFormFields } from "@payloadcms/ui";
 
 export function YouTubeAutofillClient({
@@ -15,6 +15,9 @@ export function YouTubeAutofillClient({
   const [state, setState] = useState("");
   const [suggestedTitle, setSuggestedTitle] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [thumbnailUrl, setThumbnailUrl] = useState("");
+  const [duration, setDuration] = useState("");
+  const fetchedUrl = useRef("");
 
   const fill = useCallback(
     async (incomingURL?: string) => {
@@ -40,13 +43,19 @@ export function YouTubeAutofillClient({
           setSuggestedTitle(d.title);
         }
 
-        // 2. Safe metadata population: poster and duration
+        // Metadata is derived from the video link and never manually entered.
         if (d.thumbnailUrl) {
           dispatchFields({ type: "UPDATE", path: "remotePosterUrl", value: d.thumbnailUrl });
+          setThumbnailUrl(d.thumbnailUrl);
         }
-        if (d.durationSeconds) {
+        if (typeof d.durationSeconds === "number") {
           dispatchFields({ type: "UPDATE", path: "durationSeconds", value: d.durationSeconds });
           dispatchFields({ type: "UPDATE", path: "duration", value: d.duration });
+          setDuration(d.duration);
+        } else {
+          dispatchFields({ type: "UPDATE", path: "duration", value: "" });
+          dispatchFields({ type: "UPDATE", path: "durationSeconds", value: null });
+          setDuration("");
         }
 
         setModified(true);
@@ -60,6 +69,16 @@ export function YouTubeAutofillClient({
     [url, currentTitle, dispatchFields, setModified],
   );
 
+  useEffect(() => {
+    const targetUrl = url?.trim();
+    if (!targetUrl || targetUrl === fetchedUrl.current) return;
+    const timer = window.setTimeout(() => {
+      fetchedUrl.current = targetUrl;
+      void fill(targetUrl);
+    }, 500);
+    return () => window.clearTimeout(timer);
+  }, [url, fill]);
+
   const applySuggestedTitle = () => {
     if (suggestedTitle) {
       dispatchFields({ type: "UPDATE", path: "title", value: suggestedTitle });
@@ -68,30 +87,15 @@ export function YouTubeAutofillClient({
     }
   };
 
-  useEffect(() => {
-    const onPaste = (event: ClipboardEvent) => {
-      if (
-        event.target instanceof HTMLInputElement &&
-        event.target.name === "youtubeUrl"
-      ) {
-        const pasted = event.clipboardData?.getData("text").trim();
-        if (pasted) void fill(pasted);
-      }
-    };
-    document.addEventListener("paste", onPaste);
-    return () => document.removeEventListener("paste", onPaste);
-  }, [fill]);
-
   return (
     <div className="br-youtube-autofill" dir={locale === "en" ? "ltr" : "rtl"} style={{ display: "grid", gap: "8px" }}>
-      <button
-        type="button"
-        className="br-autofill-btn"
-        disabled={busy || !url}
-        onClick={() => void fill()}
-      >
-        {busy ? (t.loading || "Loading...") : (t.autofill || "Fetch YouTube details")}
-      </button>
+      {busy && <p className="br-autofill-status" role="status">{t.loading}</p>}
+      {thumbnailUrl && (
+        <div className="br-youtube-metadata-preview">
+          <img src={thumbnailUrl} alt="" />
+          <p className="br-autofill-status">{duration || t.youtube_duration_unavailable}</p>
+        </div>
+      )}
       {suggestedTitle && (
         <div style={{ padding: "8px 12px", background: "var(--theme-elevation-100)", border: "1px solid var(--theme-elevation-250)", borderRadius: "4px", fontSize: "13px" }}>
           <p style={{ margin: "0 0 6px 0", color: "var(--theme-text)" }}>
@@ -107,7 +111,7 @@ export function YouTubeAutofillClient({
           </button>
         </div>
       )}
-      {state && <p className="br-autofill-status" role="status" style={{ fontSize: "12px", margin: 0 }}>{t[state] || state}</p>}
+      {state === "autofill_failed" && <p className="br-autofill-status" role="status">{t.autofill_failed}</p>}
     </div>
   );
 }

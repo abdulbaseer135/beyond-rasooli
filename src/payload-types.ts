@@ -329,9 +329,6 @@ export interface Article {
   topic?: (number | null) | Topic;
   coverImage?: (number | null) | Media;
   coverAlt?: string | null;
-  /**
-   * Author byline. Automatically populated with the authenticated contributor's account.
-   */
   author?: (number | null) | User;
   authorProfile?: (number | null) | Author;
   /**
@@ -378,9 +375,6 @@ export interface Article {
    * Feedback visible to the editor if changes are requested or content is rejected
    */
   reviewNotes?: string | null;
-  /**
-   * Editor who submitted this content for approval
-   */
   submittedBy?: (number | null) | User;
   showUpdatedDate?: boolean | null;
   correctionNote?: string | null;
@@ -458,13 +452,7 @@ export interface Video {
    * Actual spoken audio language of the video voiceover (may differ from page language)
    */
   spokenLanguage: 'ps' | 'fa' | 'en';
-  /**
-   * Custom poster image. If left blank, YouTube thumbnail is used automatically.
-   */
   thumbnail?: (number | null) | Media;
-  /**
-   * Formatted duration mm:ss (e.g. 0:48). Total seconds are calculated automatically.
-   */
   duration?: string | null;
   /**
    * Optional companion long-form article. Powers the Go Deeper bridge under the video player.
@@ -509,9 +497,6 @@ export interface Video {
    * Feedback visible to the editor if changes are requested or content is rejected
    */
   reviewNotes?: string | null;
-  /**
-   * Editor who submitted this content for approval
-   */
   submittedBy?: (number | null) | User;
   translationStatus?: ('none' | 'machine_draft' | 'reviewed') | null;
   seoTitle?: string | null;

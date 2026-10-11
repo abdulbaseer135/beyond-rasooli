@@ -92,6 +92,8 @@ test("Video collection has simplified 2-tab structure with essential fields and 
   // Check that technical fields exist but are hidden
   const allVideoFields = [...detailsTab.fields, ...tabsField.tabs[1].fields];
   const hiddenVideoFields = [
+    "thumbnail",
+    "duration",
     "durationSeconds",
     "remotePosterUrl",
     "summary",
